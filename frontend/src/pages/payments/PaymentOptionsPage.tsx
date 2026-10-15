@@ -530,9 +530,15 @@ export const PaymentOptionsPage: React.FC = () => {
                   <span className="text-slate-500">Merchant Name:</span>
                   <span className="font-semibold text-navy-900">KICTAMC Admissions</span>
                 </div>
-                <div className="flex justify-between py-1">
+                <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Payment Reference:</span>
                   <span className="font-mono font-bold text-gold-600">{application.applicationReference}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">SMS Txn ID Format:</span>
+                  <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                    e.g. PP261015.1838.A32759
+                  </span>
                 </div>
               </div>
             )}
@@ -551,9 +557,15 @@ export const PaymentOptionsPage: React.FC = () => {
                   <span className="text-slate-500">Merchant Name:</span>
                   <span className="font-semibold text-navy-900">KICTAMC Accounts</span>
                 </div>
-                <div className="flex justify-between py-1">
+                <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Payment Reference:</span>
                   <span className="font-mono font-bold text-gold-600">{application.applicationReference}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">SMS Txn ID Format:</span>
+                  <span className="font-mono text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                    e.g. AF261015.1838.A10243
+                  </span>
                 </div>
               </div>
             )}
@@ -568,17 +580,32 @@ export const PaymentOptionsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Provider Transaction Reference / Bank Teller Number <span className="text-red-500">*</span>
+                  {selectedMethod === 'ORANGE_MONEY'
+                    ? 'Orange Money Transaction ID'
+                    : selectedMethod === 'AFRIMONEY'
+                    ? 'Afrimoney Transaction Reference'
+                    : 'Provider Transaction Reference / Bank Teller Number'}{' '}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. SLCB-TX-984210 or OM-8812903"
+                  placeholder={
+                    selectedMethod === 'ORANGE_MONEY'
+                      ? 'e.g. PP261015.1838.A32759'
+                      : selectedMethod === 'AFRIMONEY'
+                      ? 'e.g. AF261015.1838.A10243'
+                      : 'e.g. SLCB-TX-984210 or 02-011245601-TXN'
+                  }
                   value={providerRef}
                   onChange={(e) => setProviderRef(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy-800 text-sm font-mono"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-navy-800 text-sm font-mono uppercase"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Found printed at the top of your bank deposit slip or in your SMS receipt.
+                  {selectedMethod === 'ORANGE_MONEY'
+                    ? 'Enter the exact Orange Money Transaction ID from your confirmation SMS (e.g. PP261015.1838.A32759).'
+                    : selectedMethod === 'AFRIMONEY'
+                    ? 'Enter the Afrimoney confirmation code received via SMS.'
+                    : 'Found printed at the top of your bank deposit slip or in your SMS receipt.'}
                 </p>
               </div>
 
