@@ -21,8 +21,8 @@ export const config = {
 
   cookie: {
     secret: process.env.COOKIE_SECRET || 'kictamc-cookie-secret-key-32chars',
-    sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: (process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax')) as 'strict' | 'lax' | 'none',
+    secure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : process.env.NODE_ENV === 'production',
   },
 
   storage: {

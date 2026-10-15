@@ -1,4 +1,5 @@
-const BASE_URL = '/api/v1';
+const API_ORIGIN = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
+const BASE_URL = `${API_ORIGIN}/api/v1`;
 
 export class ApiError extends Error {
   statusCode: number;
@@ -11,10 +12,18 @@ export class ApiError extends Error {
   }
 }
 
-let storedToken: string | null = null;
+const TOKEN_KEY = 'kictamc_access_token';
+let storedToken: string | null = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
 
 export const setAuthToken = (token: string | null) => {
   storedToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  }
 };
 
 export const getAuthToken = () => storedToken;

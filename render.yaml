@@ -1,0 +1,65 @@
+services:
+  # -------------------------------------------------------------
+  # KICTAMC Backend API Web Service
+  # -------------------------------------------------------------
+  - type: web
+    name: kictamc-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+        # Paste your Neon PostgreSQL connection string here (e.g., postgresql://user:pass@ep-xyz.region.aws.neon.tech/neondb?sslmode=require)
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRY
+        value: 15m
+      - key: JWT_REFRESH_EXPIRY
+        value: 7d
+      - key: STORAGE_DIR
+        value: ./storage
+      - key: MAX_FILE_SIZE_BYTES
+        value: 5242880
+      - key: EMAIL_PROVIDER
+        value: console
+      - key: SMS_PROVIDER
+        value: console
+      - key: APP_NAME
+        value: KICTAMC Portal
+      - key: COLLEGE_EMAIL
+        value: admissions@kictamc.edu.sl
+      - key: COLLEGE_PHONE
+        value: "+232-76-000000"
+      - key: FRONTEND_URL
+        sync: false
+        # Set to your frontend static site URL (e.g. https://kictamc-frontend.onrender.com)
+
+  # -------------------------------------------------------------
+  # KICTAMC Frontend Static Site (React + Vite)
+  # -------------------------------------------------------------
+  - type: static
+    name: kictamc-frontend
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+        # Set to your backend web service URL (e.g. https://kictamc-backend.onrender.com)

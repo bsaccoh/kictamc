@@ -169,5 +169,14 @@ npm run dev
 
 ---
 
+## ☁️ Cloud Deployment (Render & Neon DB)
+
+This application is pre-configured for 1-click or automated deployment on **Render** (Frontend & Backend) and **Neon.tech** (Serverless PostgreSQL):
+
+- **Render Blueprint**: [`render.yaml`](render.yaml) automatically provisions both the Node.js backend Web Service and the React static site with SPA routing.
+- **Detailed Step-by-Step Instructions**: Refer to the complete **[Deployment Guide](DEPLOYMENT.md)** for instructions on provisioning your Neon database, configuring environment variables, running database seeds, and testing the live application.
+
+---
+
 ## 📜 License
 Developed for Kenema ICT & Management College (KICTAMC), Sierra Leone. All rights reserved.

@@ -24,9 +24,38 @@ app.use(
   })
 );
 
+const allowedOrigins = [
+  config.frontendUrl,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
+  ...(process.env.ADDITIONAL_ORIGINS ? process.env.ADDITIONAL_ORIGINS.split(',').map((s) => s.trim()) : []),
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [config.frontendUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow server-to-server, curl, health checks, or same-origin requests with no origin header
+      if (!origin) return callback(null, true);
+
+      try {
+        const url = new URL(origin);
+        if (
+          allowedOrigins.includes(origin) ||
+          url.hostname.endsWith('.onrender.com') ||
+          url.hostname === 'localhost' ||
+          url.hostname === '127.0.0.1'
+        ) {
+          return callback(null, true);
+        }
+      } catch {
+        // invalid URL string, check direct match
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+      }
+
+      return callback(new Error(`CORS policy blocked access from origin: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
