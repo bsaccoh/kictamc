@@ -38,6 +38,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       emailOrPhone,
       password: pass,
     });
+    if (!data || !data.accessToken) {
+      throw new Error('Authentication failed: Invalid response from server. Check backend connection.');
+    }
     setAuthToken(data.accessToken);
     setUser(data.user);
     return data.user;
@@ -48,6 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       '/auth/register',
       payload
     );
+    if (!data || !data.accessToken) {
+      throw new Error('Registration failed: Invalid response from server. Check backend connection.');
+    }
     setAuthToken(data.accessToken);
     setUser(data.user);
     return { user: data.user, verificationCode: data.verificationCode };
