@@ -8,17 +8,17 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment & local secrets
+# Environment & local secrets (NEVER commit actual credentials or secrets)
 .env
-.env*.local
-backend/.env
-frontend/.env
+.env.*
 *.env
+**/.env
+**/.env.*
+**/.*.env
 
-# Keep example env files
+# Keep template example env files only
 !.env.example
-!backend/.env.example
-!frontend/.env.example
+!**/.env.example
 
 # Uploaded documents and receipts
 storage/documents/*
