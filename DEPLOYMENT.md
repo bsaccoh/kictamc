@@ -68,7 +68,7 @@ If you prefer to configure each service manually:
    - **Runtime**: `Node`
    - **Build Command**:
      ```bash
-     npm install && npx prisma generate && npx prisma db push && npm run build
+     npm install --include=dev && npx prisma generate && npx prisma db push && npm run build
      ```
    - **Start Command**:
      ```bash
