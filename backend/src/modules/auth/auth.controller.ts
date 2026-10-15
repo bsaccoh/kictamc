@@ -31,6 +31,7 @@ export class AuthController {
         {
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           verificationCode: result.verificationCode,
         },
         'Registration successful! Please verify your contact details.'
@@ -47,7 +48,7 @@ export class AuthController {
 
       res.cookie('accessToken', result.accessToken, {
         ...COOKIE_OPTIONS,
-        maxAge: 15 * 60 * 1000,
+        maxAge: 24 * 60 * 60 * 1000,
       });
       res.cookie('refreshToken', result.refreshToken, {
         ...COOKIE_OPTIONS,
@@ -59,6 +60,7 @@ export class AuthController {
         {
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
         },
         'Login successful.'
       );

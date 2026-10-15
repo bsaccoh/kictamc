@@ -34,27 +34,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (emailOrPhone: string, pass: string) => {
-    const data = await api.post<{ user: User; accessToken: string }>('/auth/login', {
+    const data = await api.post<{ user: User; accessToken: string; refreshToken?: string }>('/auth/login', {
       emailOrPhone,
       password: pass,
     });
     if (!data || !data.accessToken) {
       throw new Error('Authentication failed: Invalid response from server. Check backend connection.');
     }
-    setAuthToken(data.accessToken);
+    setAuthToken(data.accessToken, data.refreshToken);
     setUser(data.user);
     return data.user;
   };
 
   const register = async (payload: any) => {
-    const data = await api.post<{ user: User; accessToken: string; verificationCode?: string }>(
+    const data = await api.post<{ user: User; accessToken: string; refreshToken?: string; verificationCode?: string }>(
       '/auth/register',
       payload
     );
     if (!data || !data.accessToken) {
       throw new Error('Registration failed: Invalid response from server. Check backend connection.');
     }
-    setAuthToken(data.accessToken);
+    setAuthToken(data.accessToken, data.refreshToken);
     setUser(data.user);
     return { user: data.user, verificationCode: data.verificationCode };
   };

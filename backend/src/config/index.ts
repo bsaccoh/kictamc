@@ -15,7 +15,7 @@ export const config = {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'kictamc-development-access-secret-2026',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'kictamc-development-refresh-secret-2026',
-    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
+    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '24h',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   },
 

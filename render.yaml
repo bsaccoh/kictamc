@@ -24,7 +24,7 @@ services:
       - key: COOKIE_SECRET
         generateValue: true
       - key: JWT_ACCESS_EXPIRY
-        value: 15m
+        value: 24h
       - key: JWT_REFRESH_EXPIRY
         value: 7d
       - key: STORAGE_DIR

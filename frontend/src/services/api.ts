@@ -13,9 +13,12 @@ export class ApiError extends Error {
 }
 
 const TOKEN_KEY = 'kictamc_access_token';
-let storedToken: string | null = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+const REFRESH_TOKEN_KEY = 'kictamc_refresh_token';
 
-export const setAuthToken = (token: string | null) => {
+let storedToken: string | null = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+let storedRefreshToken: string | null = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+
+export const setAuthToken = (token: string | null, refreshToken?: string | null) => {
   storedToken = token;
   if (typeof window !== 'undefined') {
     if (token) {
@@ -23,10 +26,60 @@ export const setAuthToken = (token: string | null) => {
     } else {
       localStorage.removeItem(TOKEN_KEY);
     }
+    if (refreshToken !== undefined) {
+      storedRefreshToken = refreshToken;
+      if (refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      } else {
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      }
+    }
   }
 };
 
 export const getAuthToken = () => storedToken;
+export const getRefreshToken = () => storedRefreshToken;
+
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  const currentRefresh = storedRefreshToken || (typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null);
+  if (!currentRefresh) return null;
+
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: currentRefresh }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const json = await res.json();
+      const newAccess = json.data?.accessToken;
+      const newRefresh = json.data?.refreshToken;
+      if (newAccess) {
+        setAuthToken(newAccess, newRefresh || currentRefresh);
+        return newAccess;
+      }
+      return null;
+    } catch {
+      setAuthToken(null, null);
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
@@ -57,6 +110,36 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (!response.ok) {
+    // If token expired, try automatic refresh once before failing
+    if (
+      response.status === 401 &&
+      !endpoint.startsWith('/auth/login') &&
+      !endpoint.startsWith('/auth/register') &&
+      !endpoint.startsWith('/auth/refresh')
+    ) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        headers.set('Authorization', `Bearer ${newToken}`);
+        const retryRes = await fetch(`${BASE_URL}${endpoint}`, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+        const retryContentType = retryRes.headers.get('content-type') || '';
+        let retryData: any = null;
+        if (retryContentType.includes('application/json')) {
+          try {
+            retryData = await retryRes.json();
+          } catch {
+            retryData = null;
+          }
+        }
+        if (retryRes.ok) {
+          return retryData?.data !== undefined ? retryData.data : retryData;
+        }
+      }
+    }
+
     const errorMsg =
       data?.message ||
       (contentType.includes('text/html')
