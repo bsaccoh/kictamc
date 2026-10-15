@@ -83,10 +83,21 @@ export class ApplicationsService {
     return prisma.application.findMany({
       where: { applicantId: userId },
       include: {
+        applicant: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            firstName: true,
+            middleName: true,
+            surname: true,
+            studentProfile: true,
+          },
+        },
         academicYear: true,
         intake: true,
         course: {
-          include: { department: true },
+          include: { department: true, faculty: true },
         },
         documents: true,
         payments: true,
