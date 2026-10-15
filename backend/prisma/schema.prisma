@@ -1,0 +1,544 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  APPLICANT
+  ADMISSIONS_OFFICER
+  FINANCE_OFFICER
+  SYSTEM_ADMIN
+}
+
+enum QualificationLevel {
+  LOWER_DIPLOMA
+  HIGHER_DIPLOMA
+  DEGREE
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  AWAITING_PAYMENT
+  UNDER_REVIEW
+  ACTION_REQUIRED
+  COMPLETE
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING_VERIFICATION
+  PAID
+  REJECTED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  MANUAL_BANK_DEPOSIT
+  MANUAL_ORANGE_MONEY
+  MANUAL_AFRIMONEY
+  ONLINE_MOCK
+}
+
+enum DocumentType {
+  EXAM_RESULT
+  TESTIMONIAL
+  BIRTH_CERTIFICATE
+  ID_DOCUMENT
+  PASSPORT_PHOTO
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  SMS_OTP
+  PASSWORD_RESET
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  phone            String          @unique
+  passwordHash     String
+  firstName        String
+  middleName       String?
+  surname          String
+  role             Role            @default(APPLICANT)
+  isEmailVerified  Boolean         @default(false)
+  isPhoneVerified  Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  termsAcceptedAt  DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  studentProfile   StudentProfile?
+  applications     Application[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  verificationTokens VerificationToken[]
+  
+  // Back-relations for staff actions
+  reviewedApplications Application[]  @relation("DecidedByStaff")
+  verifiedDocuments    ApplicationDocument[] @relation("DocumentVerifier")
+  verifiedPayments     Payment[]             @relation("PaymentVerifier")
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model StudentProfile {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth         DateTime?
+  gender              String?
+  nationality         String    @default("Sierra Leonean")
+  placeOfBirth        String?
+  maritalStatus       String?
+  residentialAddress  String?
+  townCity            String?
+  chiefdom            String?
+  district            String?
+  regionProvince      String?
+  postalAddress       String?
+  passportPhotoUrl    String?
+
+  // Parent / Guardian
+  parentFullName      String?
+  parentRelationship  String?
+  parentPhone         String?
+  parentAltPhone      String?
+  parentAddress       String?
+  parentEmail         String?
+  parentOccupation    String?
+
+  // Emergency Contact
+  emergencyFullName   String?
+  emergencyRelationship String?
+  emergencyPhone      String?
+  emergencyAddress    String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model AcademicYear {
+  id          String            @id @default(uuid())
+  name        String            @unique // e.g. "2026/2027"
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  intakes      AdmissionIntake[]
+  courses      Course[]
+  applications Application[]
+
+  @@index([isActive])
+}
+
+model AdmissionIntake {
+  id                  String       @id @default(uuid())
+  academicYearId      String
+  academicYear        AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  name                String       // e.g. "September Intake", "January Intake"
+  startDate           DateTime
+  endDate             DateTime
+  applicationDeadline DateTime
+  isActive            Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  applications        Application[]
+
+  @@index([academicYearId])
+  @@index([isActive])
+}
+
+model Faculty {
+  id             String       @id @default(uuid())
+  name           String       @unique // e.g. "Faculty of Information & Communication Technology"
+  code           String       @unique // e.g. "FICT"
+  description    String?
+  deanName       String?      // e.g. "Dr. Patrick Conteh"
+  email          String?      // e.g. "fict@kictamc.edu.sl"
+  phone          String?      // e.g. "+23276100010"
+  officeLocation String?      // e.g. "ICT Complex, 2nd Floor, Main Campus"
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  departments    Department[]
+  courses        Course[]
+
+  @@index([isActive])
+  @@index([code])
+}
+
+model Department {
+  id             String   @id @default(uuid())
+  facultyId      String?
+  faculty        Faculty? @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  name           String   @unique // e.g. "Department of Computer Science"
+  code           String   @unique // e.g. "DCS"
+  description    String?
+  hodName        String?  // e.g. "Dr. Joseph M. Koroma"
+  hodTitle       String?  // e.g. "Head of Department"
+  email          String?  // e.g. "cs@kictamc.edu.sl"
+  phone          String?  // e.g. "+232 76 200010"
+  officeLocation String?  // e.g. "ICT Block A, Room 102"
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  courses        Course[]
+
+  @@index([facultyId])
+  @@index([isActive])
+}
+
+model Course {
+  id                    String                   @id @default(uuid())
+  facultyId             String?
+  faculty               Faculty?                 @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+  departmentId          String?
+  department            Department?              @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  academicYearId        String?
+  academicYear          AcademicYear?            @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  name                  String                   // e.g. "BSc in Information Technology"
+  code                  String                   @unique // e.g. "BIT-100"
+  qualificationLevel    QualificationLevel
+  qualificationAward    String?                  // e.g. "Bachelor of Science (BSc)"
+  duration              Int                      @default(3)
+  durationUnit          String                   @default("Years") // "Years", "Semesters", "Months"
+  description           String?
+  detailedDescription   String?
+  admissionRequirements String?
+  learningOutcomes      String?
+  creditUnits           Int?                     @default(120)
+  intakeCapacity        Int?                     @default(50)
+  applicationFeeMinor   Int                      // stored in minor units e.g. 250000 SLE cents or Leones
+  tuitionFeeMinor       Int                      @default(450000) // stored in minor units e.g. 450000 SLE cents = SLE 4,500.00
+  currency              String                   @default("SLE")
+  studyModes            String                   @default("Full-Time,Part-Time")
+  preferredCampuses     String                   @default("Kenema Main Campus")
+  openingDate           DateTime?
+  closingDate           DateTime?
+  isActive              Boolean                  @default(true)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  documentRequirements  CourseDocumentRequirement[]
+  applications          Application[]
+
+  @@index([facultyId])
+  @@index([departmentId])
+  @@index([qualificationLevel])
+  @@index([isActive])
+}
+
+model CourseDocumentRequirement {
+  id           String       @id @default(uuid())
+  courseId     String
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  documentType DocumentType
+  name         String       // e.g. "WASSCE / WASSCE Certificate"
+  description  String?
+  isMandatory  Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model Application {
+  id                      String            @id @default(uuid())
+  applicationReference    String            @unique // e.g. "KICTAMC-2026-000101"
+  applicantId             String
+  applicant               User              @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  academicYearId          String
+  academicYear            AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  intakeId                String
+  intake                  AdmissionIntake   @relation(fields: [intakeId], references: [id], onDelete: Restrict)
+  courseId                String
+  course                  Course            @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  studyMode               String            @default("Full-Time")
+  preferredCampus         String            @default("Kenema Main Campus")
+  status                  ApplicationStatus @default(DRAFT)
+  paymentStatus           PaymentStatus     @default(UNPAID)
+  currentStep             Int               @default(1)
+
+  // Auditable snapshot captured at submission
+  courseNameSnapshot         String?
+  courseCodeSnapshot         String?
+  courseLevelSnapshot        String?
+  departmentNameSnapshot     String?
+  applicationFeeMinorSnapshot Int?
+  tuitionFeeMinorSnapshot    Int?
+  currencySnapshot           String?
+
+  submittedAt             DateTime?
+  decisionAt              DateTime?
+  decisionRemarks         String?
+  decidedByUserId         String?
+  decidedBy               User?             @relation("DecidedByStaff", fields: [decidedByUserId], references: [id])
+  correctionNotes         String?
+
+  declarationAccepted     Boolean           @default(false)
+  declarationAcceptedAt   DateTime?
+
+  // Interview Management & Acceptance Publishing
+  interviewDate           DateTime?
+  interviewTime           String?          // e.g. "10:30 AM"
+  interviewVenue          String?          // e.g. "Main Campus Conference Hall, Kenema"
+  interviewMode           String?          @default("IN_PERSON") // "IN_PERSON" or "ONLINE"
+  interviewStatus         String?          @default("NONE") // "NONE", "SCHEDULED", "PASSED", "FAILED", "WAIVED"
+  interviewNotes          String?          // Instructions for applicant or remarks from panel
+  interviewScore          Int?             // Panel evaluation score / percentage
+  interviewScheduledAt    DateTime?
+  interviewConductedAt    DateTime?
+  acceptanceLetterPublished Boolean        @default(false)
+  acceptanceLetterPublishedAt DateTime?
+
+  // Matriculation & Enrollment Management
+  matriculationNumber         String?           @unique // e.g. "KICTAMC/2026/BIT/0012"
+  isEnrolled                  Boolean           @default(false)
+  enrolledAt                  DateTime?
+  offerAccepted               Boolean           @default(false)
+  offerAcceptedAt             DateTime?
+  matriculationFeePaid        Boolean           @default(false)
+  matriculationFeeMinor       Int?
+
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  educations              ApplicationEducation[]
+  documents               ApplicationDocument[]
+  payments                Payment[]
+  statusHistories         ApplicationStatusHistory[]
+  confirmationToken       PaymentConfirmationToken?
+
+  @@index([applicantId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([courseId])
+  @@index([academicYearId])
+  @@index([matriculationNumber])
+}
+
+model ApplicationEducation {
+  id                  String      @id @default(uuid())
+  applicationId       String
+  application         Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  institutionName     String
+  institutionLocation String
+  examinationType     String      // e.g. "WASSCE", "BECE", "DIPLOMA", "DEGREE"
+  examinationYear     Int
+  candidateNumber     String?
+  qualificationObtained String
+  completionStatus    String      // "COMPLETED", "IN_PROGRESS"
+  subjectsAndGrades   Json?       // array of { subject: string, grade: string }
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([applicationId])
+}
+
+model ApplicationDocument {
+  id              String         @id @default(uuid())
+  applicationId   String
+  application     Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentType    DocumentType
+  originalFilename String
+  storagePath     String
+  fileSizeBytes   Int
+  mimeType        String
+  status          DocumentStatus @default(PENDING)
+  rejectionReason String?
+  verifiedAt      DateTime?
+  verifiedByUserId String?
+  verifiedBy      User?          @relation("DocumentVerifier", fields: [verifiedByUserId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([applicationId])
+  @@index([status])
+}
+
+model ApplicationStatusHistory {
+  id              String            @id @default(uuid())
+  applicationId   String
+  application     Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus      ApplicationStatus
+  toStatus        ApplicationStatus
+  changedByUserId String?
+  changeReason    String?
+  createdAt       DateTime          @default(now())
+
+  @@index([applicationId])
+}
+
+model Payment {
+  id                         String         @id @default(uuid())
+  applicationId              String
+  application                Application    @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  internalReference          String         @unique // e.g. "KICTAMC-PAYREF-173829"
+  paymentMethod              PaymentMethod
+  expectedAmountMinor        Int
+  declaredAmountMinor        Int?
+  currency                   String         @default("SLE")
+  providerTransactionReference String?
+  receiptDocumentPath        String?
+  paymentType                String         @default("APPLICATION_FEE") // "APPLICATION_FEE", "TUITION_MATRICULATION"
+  notes                      String?
+  status                     PaymentStatus  @default(PENDING_VERIFICATION)
+  rejectionReason            String?
+  submittedAt                DateTime       @default(now())
+  verifiedAt                 DateTime?
+  verifiedByUserId           String?
+  verifiedBy                 User?          @relation("PaymentVerifier", fields: [verifiedByUserId], references: [id])
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+
+  confirmationToken          PaymentConfirmationToken?
+
+  @@index([applicationId])
+  @@index([status])
+  @@index([internalReference])
+  @@index([paymentType])
+}
+
+model PaymentConfirmationToken {
+  id            String      @id @default(uuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  paymentId     String      @unique
+  payment       Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  token         String      @unique // e.g. "KICTAMC-PAY-7F3A9C82"
+  issuedAt      DateTime    @default(now())
+  isValid       Boolean     @default(true)
+
+  @@index([token])
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  message        String
+  type           NotificationType @default(INFO)
+  channel        String           @default("IN_APP") // "IN_APP", "EMAIL", "SMS"
+  isRead         Boolean          @default(false)
+  deliveryStatus String           @default("SENT")
+  createdAt      DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail  String?
+  action     String   // e.g. "USER_REGISTER", "APPLICATION_SUBMIT", "PAYMENT_VERIFIED"
+  resource   String   // e.g. "Application", "Payment", "User"
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String
+  type      TokenType
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+model NewsArticle {
+  id           String   @id @default(uuid())
+  title        String
+  slug         String   @unique
+  summary      String
+  content      String   @db.Text
+  category     String   @default("ANNOUNCEMENT") // ANNOUNCEMENT, ACADEMIC, ADMISSION, CAMPUS_LIFE
+  featuredImage String?
+  isPublished  Boolean  @default(true)
+  publishedAt  DateTime @default(now())
+  author       String   @default("KICTAMC Registry")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isPublished])
+  @@index([slug])
+  @@index([category])
+}
+
+model CollegeEvent {
+  id          String    @id @default(uuid())
+  title       String
+  description String    @db.Text
+  venue       String
+  startDate   DateTime
+  endDate     DateTime?
+  timeString  String?
+  category    String    @default("ACADEMIC")
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished])
+  @@index([startDate])
+}
+
+model PublicEnquiry {
+  id        String   @id @default(uuid())
+  fullName  String
+  email     String
+  phone     String?
+  subject   String
+  message   String   @db.Text
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+

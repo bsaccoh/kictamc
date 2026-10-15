@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & local secrets
+.env
+.env*.local
+backend/.env
+frontend/.env
+*.env
+
+# Keep example env files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Uploaded documents and receipts
+storage/documents/*
+!storage/documents/.gitkeep
+storage/receipts/*
+!storage/receipts/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Internal / temp artifacts
+.system_generated/
+.tempmediaStorage/
