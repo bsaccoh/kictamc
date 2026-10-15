@@ -73,8 +73,21 @@ if (config.env !== 'test') {
 // Global API rate limiting
 app.use('/api', apiRateLimiter);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
+// Root status endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'KICTAMC Portal Backend API',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      publicApi: '/api/v1/public',
+    },
+  });
+});
+
+// Health check endpoint (supports both /health and /api/health)
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
