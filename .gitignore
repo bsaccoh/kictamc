@@ -43,3 +43,6 @@ Thumbs.db
 # Internal / temp artifacts
 .system_generated/
 .tempmediaStorage/
+backups/
+*.dump
+

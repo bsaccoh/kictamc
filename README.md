@@ -74,19 +74,6 @@ This repository delivers **Phase 1: Student Application Portal & Admissions Admi
 
 ---
 
-## 🔑 Default Seed Credentials
-
-The database is seeded with pre-configured accounts:
-
-| Role | Email | Password |
-|---|---|---|
-| **System Administrator** | `admin@kictamc.edu.sl` | `Admin@123!` |
-| **Admissions Officer** | `admissions@kictamc.edu.sl` | `Admissions@123!` |
-| **Finance Officer** | `finance@kictamc.edu.sl` | `Finance@123!` |
-| **Student Applicant** | `applicant@kictamc.edu.sl` | `Applicant@123!` |
-
----
-
 ## ⚙️ Setup and Installation
 
 ### Prerequisites

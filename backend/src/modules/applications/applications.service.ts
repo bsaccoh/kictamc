@@ -447,7 +447,7 @@ export class ApplicationsService {
           courseNameSnapshot: app.course.name,
           courseCodeSnapshot: app.course.code,
           courseLevelSnapshot: app.course.qualificationLevel,
-          departmentNameSnapshot: app.course.department.name,
+          departmentNameSnapshot: app.course.department?.name || null,
           applicationFeeMinorSnapshot: app.course.applicationFeeMinor,
           tuitionFeeMinorSnapshot: app.course.tuitionFeeMinor,
           currencySnapshot: app.course.currency,

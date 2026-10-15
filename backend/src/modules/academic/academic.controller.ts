@@ -41,7 +41,7 @@ export class AcademicController {
 
   async createFaculty(req: Request, res: Response, next: NextFunction) {
     try {
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const faculty = await academicService.createFaculty(req.body, staffUserId);
       return sendCreated(res, faculty, 'Faculty created successfully.');
     } catch (error) {
@@ -52,7 +52,7 @@ export class AcademicController {
   async updateFaculty(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const faculty = await academicService.updateFaculty(id, req.body, staffUserId);
       return sendSuccess(res, faculty, 'Faculty updated successfully.');
     } catch (error) {
@@ -63,7 +63,7 @@ export class AcademicController {
   async deleteFaculty(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const result = await academicService.deleteFaculty(id, staffUserId);
       return sendSuccess(res, result, result.message);
     } catch (error) {
@@ -124,7 +124,7 @@ export class AcademicController {
 
   async createCourse(req: Request, res: Response, next: NextFunction) {
     try {
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const course = await academicService.createCourse(req.body, staffUserId);
       return sendCreated(res, course, 'Course created successfully.');
     } catch (error) {
@@ -135,7 +135,7 @@ export class AcademicController {
   async updateCourse(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const course = await academicService.updateCourse(id, req.body, staffUserId);
       return sendSuccess(res, course, 'Course updated successfully.');
     } catch (error) {
@@ -146,7 +146,7 @@ export class AcademicController {
   async deleteCourse(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const staffUserId = req.user?.id;
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const result = await academicService.deleteCourse(id, staffUserId);
       return sendSuccess(res, result, result.message);
     } catch (error) {
@@ -208,7 +208,8 @@ export class AcademicController {
 
   async getDepartmentById(req: Request, res: Response, next: NextFunction) {
     try {
-      const department = await academicService.getDepartmentById(req.params.id);
+      const id = String(req.params.id);
+      const department = await academicService.getDepartmentById(id);
       return sendSuccess(res, department, 'Department details retrieved.');
     } catch (error) {
       next(error);
@@ -217,7 +218,8 @@ export class AcademicController {
 
   async createDepartment(req: Request, res: Response, next: NextFunction) {
     try {
-      const department = await academicService.createDepartment(req.body, (req as any).user?.id);
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
+      const department = await academicService.createDepartment(req.body, staffUserId);
       return sendCreated(res, department, 'Department created successfully.');
     } catch (error) {
       next(error);
@@ -226,10 +228,12 @@ export class AcademicController {
 
   async updateDepartment(req: Request, res: Response, next: NextFunction) {
     try {
+      const id = String(req.params.id);
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
       const department = await academicService.updateDepartment(
-        req.params.id,
+        id,
         req.body,
-        (req as any).user?.id
+        staffUserId
       );
       return sendSuccess(res, department, 'Department updated successfully.');
     } catch (error) {
@@ -239,7 +243,9 @@ export class AcademicController {
 
   async deleteDepartment(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await academicService.deleteDepartment(req.params.id, (req as any).user?.id);
+      const id = String(req.params.id);
+      const staffUserId = (req as any).user?.userId || (req as any).user?.id;
+      const result = await academicService.deleteDepartment(id, staffUserId);
       return sendSuccess(res, result, 'Department deleted successfully.');
     } catch (error) {
       next(error);

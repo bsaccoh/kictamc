@@ -165,7 +165,7 @@ async function runE2E() {
   const finLogin = await request({
     path: '/api/v1/auth/login',
     method: 'POST'
-  }, { emailOrPhone: 'finance@kictamc.edu.sl', password: 'Finance@123!' });
+  }, { emailOrPhone: process.env.TEST_FINANCE_EMAIL || 'finance@kictamc.edu.sl', password: process.env.SEED_FINANCE_PASSWORD || process.env.TEST_FINANCE_PASSWORD || '' });
   const financeToken = finLogin.data.data.accessToken;
 
   const verifyPayRes = await request({
@@ -188,7 +188,7 @@ async function runE2E() {
   const admLogin = await request({
     path: '/api/v1/auth/login',
     method: 'POST'
-  }, { emailOrPhone: 'admissions@kictamc.edu.sl', password: 'Admissions@123!' });
+  }, { emailOrPhone: process.env.TEST_ADMISSIONS_EMAIL || 'admissions@kictamc.edu.sl', password: process.env.SEED_ADMISSIONS_PASSWORD || process.env.TEST_ADMISSIONS_PASSWORD || '' });
   const admissionsToken = admLogin.data.data.accessToken;
 
   const decisionRes = await request({

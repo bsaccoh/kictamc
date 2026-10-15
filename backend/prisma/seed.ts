@@ -30,10 +30,10 @@ async function main() {
   await prisma.user.deleteMany();
 
   // 2. Seed Users
-  const adminPasswordHash = await hashPassword('Admin@123!');
-  const admissionsPasswordHash = await hashPassword('Admissions@123!');
-  const financePasswordHash = await hashPassword('Finance@123!');
-  const applicantPasswordHash = await hashPassword('Applicant@123!');
+  const adminPasswordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD || 'ChangeMeInDev2026!');
+  const admissionsPasswordHash = await hashPassword(process.env.SEED_ADMISSIONS_PASSWORD || 'ChangeMeInDev2026!');
+  const financePasswordHash = await hashPassword(process.env.SEED_FINANCE_PASSWORD || 'ChangeMeInDev2026!');
+  const applicantPasswordHash = await hashPassword(process.env.SEED_APPLICANT_PASSWORD || 'ChangeMeInDev2026!');
 
   const admin = await prisma.user.create({
     data: {

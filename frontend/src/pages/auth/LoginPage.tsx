@@ -6,7 +6,6 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  KeyRound
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -19,7 +18,6 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDemoMenu, setShowDemoMenu] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +36,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDemo = (email: string, pass: string) => {
-    setEmailOrPhone(email);
-    setPassword(pass);
-    setShowDemoMenu(false);
   };
 
   return (
@@ -199,61 +191,6 @@ export const LoginPage: React.FC = () => {
               </Link>
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Floating Demo Credentials Widget (Discreet in corner, keeps card 100% clean) */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowDemoMenu(!showDemoMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full text-xs shadow-md backdrop-blur-xs transition border border-white/10"
-            title="Click to fill test credentials"
-          >
-            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            <span>Demo Logins</span>
-          </button>
-
-          {showDemoMenu && (
-            <div className="absolute bottom-9 right-0 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 space-y-1 text-xs">
-              <div className="px-2 py-1 font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                Select Demo Role
-              </div>
-              <button
-                type="button"
-                onClick={() => fillDemo('applicant@kictamc.edu.sl', 'Applicant@123!')}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex flex-col"
-              >
-                <span className="font-semibold text-slate-800">Student Applicant</span>
-                <span className="text-[10px] text-slate-500">applicant@kictamc.edu.sl</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemo('admin@kictamc.edu.sl', 'Admin@123!')}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex flex-col"
-              >
-                <span className="font-semibold text-slate-800">Administrator</span>
-                <span className="text-[10px] text-slate-500">admin@kictamc.edu.sl</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemo('admissions@kictamc.edu.sl', 'Admissions@123!')}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex flex-col"
-              >
-                <span className="font-semibold text-slate-800">Admissions Officer</span>
-                <span className="text-[10px] text-slate-500">admissions@kictamc.edu.sl</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemo('finance@kictamc.edu.sl', 'Finance@123!')}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex flex-col"
-              >
-                <span className="font-semibold text-slate-800">Finance Officer</span>
-                <span className="text-[10px] text-slate-500">finance@kictamc.edu.sl</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

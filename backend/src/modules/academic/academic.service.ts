@@ -1,5 +1,5 @@
 import { prisma } from '../../utils/prisma';
-import { QualificationLevel, DocumentType } from '@prisma/client';
+import { Prisma, QualificationLevel, DocumentType } from '@prisma/client';
 import { AppError } from '../../middleware/errorHandler';
 
 export class AcademicService {
@@ -739,13 +739,17 @@ export class AcademicService {
       },
     });
 
-    await createAuditLog({
-      userId: actorId,
-      action: 'CREATE_DEPARTMENT',
-      entity: 'Department',
-      entityId: dept.id,
-      details: { name: dept.name, code: dept.code, facultyId: dept.facultyId },
-    });
+    if (actorId) {
+      await prisma.auditLog.create({
+        data: {
+          userId: actorId,
+          action: 'CREATE_DEPARTMENT',
+          resource: 'Department',
+          resourceId: dept.id,
+          details: { name: dept.name, code: dept.code, facultyId: dept.facultyId },
+        },
+      });
+    }
 
     return dept;
   }
@@ -803,13 +807,17 @@ export class AcademicService {
       },
     });
 
-    await createAuditLog({
-      userId: actorId,
-      action: 'UPDATE_DEPARTMENT',
-      entity: 'Department',
-      entityId: updated.id,
-      details: { updatedFields: Object.keys(data) },
-    });
+    if (actorId) {
+      await prisma.auditLog.create({
+        data: {
+          userId: actorId,
+          action: 'UPDATE_DEPARTMENT',
+          resource: 'Department',
+          resourceId: updated.id,
+          details: { updatedFields: Object.keys(data) },
+        },
+      });
+    }
 
     return updated;
   }
@@ -833,13 +841,17 @@ export class AcademicService {
 
     await prisma.department.delete({ where: { id } });
 
-    await createAuditLog({
-      userId: actorId,
-      action: 'DELETE_DEPARTMENT',
-      entity: 'Department',
-      entityId: id,
-      details: { name: department.name, code: department.code },
-    });
+    if (actorId) {
+      await prisma.auditLog.create({
+        data: {
+          userId: actorId,
+          action: 'DELETE_DEPARTMENT',
+          resource: 'Department',
+          resourceId: id,
+          details: { name: department.name, code: department.code },
+        },
+      });
+    }
 
     return { message: `Department "${department.name}" removed successfully.` };
   }

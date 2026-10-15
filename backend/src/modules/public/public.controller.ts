@@ -30,7 +30,7 @@ export const publicController = {
 
   async getNewsArticle(req: Request, res: Response, next: NextFunction) {
     try {
-      const { slug } = req.params;
+      const slug = String(req.params.slug);
       const data = await publicService.getNewsArticleBySlug(slug);
       if (!data) {
         return res.status(404).json({
