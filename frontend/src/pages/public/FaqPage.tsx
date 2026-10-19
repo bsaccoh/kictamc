@@ -100,7 +100,7 @@ export const FaqPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#C69A43]">
               Help &amp; Clarifications
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Frequently Asked Questions (FAQ)
             </h1>
             <p className="text-sm sm:text-base text-slate-300">
@@ -182,7 +182,7 @@ export const FaqPage: React.FC = () => {
         {/* Additional Assistance Box */}
         <div className="p-6 bg-[#142D4E] text-white rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md">
           <div className="space-y-1 text-center sm:text-left">
-            <h3 className="text-base font-bold">Still have an unanswered question?</h3>
+            <h3 className="text-base font-bold text-white">Still have an unanswered question?</h3>
             <p className="text-xs text-slate-300">
               Our registry staff are available to assist you Monday through Friday.
             </p>

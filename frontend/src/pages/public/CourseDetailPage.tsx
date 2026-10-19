@@ -81,7 +81,7 @@ export const CourseDetailPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
                 {course.name}
               </h1>
             </div>

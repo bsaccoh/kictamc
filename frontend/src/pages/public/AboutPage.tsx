@@ -28,7 +28,7 @@ export const AboutPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#C69A43]">
               About the College
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Kenema ICT &amp; Management College
             </h1>
             <p className="text-sm sm:text-base text-slate-300">
@@ -213,7 +213,7 @@ export const AboutPage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-[#142D4E] text-white rounded-xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-1 text-center sm:text-left">
-            <h3 className="text-xl font-bold">Ready to Join KICTAM College?</h3>
+            <h3 className="text-xl font-bold text-white">Ready to Join KICTAM College?</h3>
             <p className="text-xs text-slate-300">
               Explore our programmes or begin your online application today.
             </p>

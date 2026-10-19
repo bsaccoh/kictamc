@@ -29,7 +29,7 @@ export const AdmissionsPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#C69A43]">
               Enrollment at KICTAMC
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Admissions Overview
             </h1>
             <p className="text-sm sm:text-base text-slate-300">

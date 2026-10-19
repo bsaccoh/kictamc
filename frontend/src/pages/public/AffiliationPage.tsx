@@ -28,7 +28,7 @@ export const AffiliationPage: React.FC = () => {
               <Building2 className="w-3.5 h-3.5" />
               <span>Institutional Partnership</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Our University Affiliation
             </h1>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
@@ -193,7 +193,7 @@ export const AffiliationPage: React.FC = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-[#142D4E] text-white rounded-2xl p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-1 text-center md:text-left">
-            <h3 className="text-xl font-bold">Have Questions About Admissions or Affiliation?</h3>
+            <h3 className="text-xl font-bold text-white">Have Questions About Admissions or Affiliation?</h3>
             <p className="text-xs text-slate-300">
               The KICTAMC Registry and Admissions Office at 19 Bockarie Gbay Street, Kenema, are available to assist you.
             </p>

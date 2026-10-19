@@ -75,7 +75,7 @@ export const NewsDetailPage: React.FC = () => {
               <span className="text-slate-300">&bull; {article.author}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
               {article.title}
             </h1>
           </div>

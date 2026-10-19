@@ -16,7 +16,7 @@ export const PoliciesPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#C69A43]">
               Institutional Governance
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               {activeTab === 'privacy' ? 'Privacy Policy' : 'Terms of Use & Admissions Regulations'}
             </h1>
             <p className="text-sm sm:text-base text-slate-300">

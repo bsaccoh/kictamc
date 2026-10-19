@@ -771,10 +771,10 @@ export const HomePage: React.FC = () => {
             <img src="/kictamc-logo.png" alt="KICTAMC Crest" className="w-full h-full object-contain" />
           </div>
           <div className="max-w-2xl mx-auto space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Take the Next Step in Your Education
             </h2>
-            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-100 leading-relaxed">
               Join a community committed to digital skills, management excellence, and nation-building. Explore our active programmes and submit your application online.
             </p>
           </div>

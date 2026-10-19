@@ -32,7 +32,7 @@ export const NewsPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-[#C69A43]">
               Official Communications
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               News &amp; Official Announcements
             </h1>
             <p className="text-sm sm:text-base text-slate-300">

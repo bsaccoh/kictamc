@@ -250,7 +250,7 @@ export const PublicLayout: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:text-white hover:bg-white/10 border border-slate-400/30 rounded-md transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5 text-[#C69A43]" />
-                Student Portal
+                Login
               </Link>
               <Link
                 to="/apply"
@@ -401,7 +401,7 @@ export const PublicLayout: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full text-center py-2 text-xs font-semibold text-white border border-[#2b4c77] rounded bg-[#142D4E]"
               >
-                Student Portal Login
+                Login
               </Link>
               <Link
                 to="/apply"
