@@ -24,6 +24,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { api } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { OfficialSeal } from '../../components/ui/OfficialSeal';
 
 export const PaymentReceiptPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,19 @@ export const PaymentReceiptPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  // Fetch document configuration for receipt
+  const { data: receiptConfig } = useQuery<any>({
+    queryKey: ['document-config-receipt'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/document-config/receipt').catch(() => null);
+        return res?.data || res || null;
+      } catch {
+        return null;
+      }
+    },
+  });
 
   // Fetch application either by parameter ID or current student's active application
   const { data: application, isLoading, error } = useQuery({
@@ -378,24 +392,24 @@ export const PaymentReceiptPage: React.FC = () => {
               />
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-serif font-extrabold text-[#0F223D] tracking-tight uppercase leading-snug">
-                  Kenema ICT &amp; Management<br />College
+                  {receiptConfig?.institutionName ? receiptConfig.institutionName : <>Kenema ICT &amp; Management<br />College</>}
                 </h1>
                 <p className="text-xs font-bold text-amber-700 tracking-wider uppercase mt-0.5">
-                  Motto: "Non Sibi Sed Patriae" (Not For Self, But For Country)
+                  Motto: "{receiptConfig?.institutionMotto || 'Non Sibi Sed Patriae (Not For Self, But For Country)'}"
                 </p>
                 <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-0.5">
-                  Office of the Bursar &amp; Financial Services Directorate
+                  {receiptConfig?.officeName || 'Office of the Bursar & Financial Services Directorate'}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                  19 Bockarie Gbay Street Kenema<br />
-                  Contact: +23272808080 | Email: bursar@kictamc.edu.sl | admissions@kictamc.edu.sl
+                  {receiptConfig?.address || '19 Bockarie Gbay Street Kenema'}<br />
+                  Contact: {receiptConfig?.contactNumber || '+23272808080'} | Email: {receiptConfig?.email || 'bursar@kictamc.edu.sl'}
                 </p>
               </div>
             </div>
 
             <div className="text-right flex-shrink-0 pl-2">
               <span className="inline-block px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-extrabold rounded-full uppercase tracking-wider mb-2">
-                Official Bursary Receipt
+                {receiptConfig?.title || 'Official Bursary Receipt'}
               </span>
               <div className="text-xs text-slate-600 font-medium">
                 Receipt No: <span className="font-mono font-bold text-slate-900">{receiptSerial}</span>
@@ -607,7 +621,8 @@ export const PaymentReceiptPage: React.FC = () => {
             Official Bursary Certification &amp; Admissions Policy:
           </p>
           <p>
-            This official electronic receipt and cryptographic payment token certify that the candidate has satisfied the statutory application fee requirement of Kenema ICT &amp; Management College. This receipt is an official collegiate fiscal instrument. Please present this document along with your Provisional Admission Letter during matriculation and physical document verification.
+            {receiptConfig?.policyNotice ||
+              'This official electronic receipt and cryptographic payment token certify that the candidate has satisfied the statutory application fee requirement of Kenema ICT & Management College. This receipt is an official collegiate fiscal instrument. Please present this document along with your Offer of Admission letter during matriculation and physical document verification.'}
           </p>
         </div>
 
@@ -618,46 +633,39 @@ export const PaymentReceiptPage: React.FC = () => {
             <div>
               <div className="h-10 flex items-center">
                 <span className="font-serif italic font-bold text-base text-slate-700 select-none">
-                  Internal Audit
+                  {receiptConfig?.auditorName || 'Internal Audit'}
                 </span>
               </div>
               <div className="border-t border-slate-400 pt-1">
-                <p className="font-bold text-xs text-slate-900">Admissions Audit Office</p>
-                <p className="text-[11px] text-slate-500">Internal Audit Directorate</p>
+                <p className="font-bold text-xs text-slate-900">{receiptConfig?.auditorTitle || 'Admissions Audit Office'}</p>
+                <p className="text-[11px] text-slate-500">{receiptConfig?.auditorOffice || 'Internal Audit Directorate'}</p>
                 <p className="text-[10px] text-slate-400">KICTAMC Kenema Campus</p>
               </div>
             </div>
 
-            {/* Circular Bursary Official Stamp */}
+            {/* Professional Bursary Official Seal */}
             <div className="flex flex-col items-center justify-center text-center">
-              <div className="w-22 h-22 rounded-full border-2 border-dashed border-[#0F223D]/50 flex flex-col items-center justify-center p-2 text-center rotate-[-3deg] bg-slate-50 shadow-xs">
-                <ShieldCheck className="w-5 h-5 text-emerald-700 mb-0.5" />
-                <span className="text-[7.5px] font-black uppercase tracking-wider text-[#0F223D] leading-tight">
-                  OFFICE OF THE BURSAR
-                </span>
-                <span className="text-[6.5px] font-semibold text-slate-600 leading-tight">
-                  KICTAMC • KENEMA
-                </span>
-                <span className="text-[7.5px] font-mono font-bold text-emerald-800">
-                  FEES CLEARED
-                </span>
-                <span className="text-[6px] text-slate-400">
-                  {yearClean}
-                </span>
-              </div>
+              <OfficialSeal
+                size={110}
+                type="bursary"
+                sessionYear={yearClean}
+                topText={receiptConfig?.sealTextTop}
+                centerText={receiptConfig?.sealTextCenter}
+                bottomText={receiptConfig?.sealTextBottom}
+              />
             </div>
 
             {/* Bursar Signature Block */}
             <div className="text-right">
               <div className="h-10 flex items-center justify-end">
                 <span className="font-serif italic font-bold text-base text-[#0F223D] tracking-wide select-none">
-                  M. S. Koroma
+                  {receiptConfig?.bursarSignatureText || 'M. S. Koroma'}
                 </span>
               </div>
               <div className="border-t border-slate-400 pt-1">
-                <p className="font-bold text-xs text-slate-900">Mr. Mohamed S. Koroma</p>
-                <p className="text-[11px] text-slate-500">Bursar &amp; Chief Financial Officer</p>
-                <p className="text-[10px] text-slate-400">KICTAMC Finance Office</p>
+                <p className="font-bold text-xs text-slate-900">{receiptConfig?.bursarName || 'Mr. Mohamed S. Koroma'}</p>
+                <p className="text-[11px] text-slate-500">{receiptConfig?.bursarTitle || 'Bursar & Chief Financial Officer'}</p>
+                <p className="text-[10px] text-slate-400">{receiptConfig?.bursarOffice || 'KICTAMC Finance Office'}</p>
               </div>
             </div>
           </div>

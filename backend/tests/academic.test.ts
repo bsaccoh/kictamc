@@ -12,7 +12,7 @@ describe('Academic Catalog & Courses Module Tests', () => {
 
   beforeAll(async () => {
     const adminUser = await prisma.user.findFirst({
-      where: { role: Role.SYSTEM_ADMIN },
+      where: { role: { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.SYSTEM_ADMIN] } },
     });
     const applicantUser = await prisma.user.findFirst({
       where: { role: Role.APPLICANT },

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../services/api';
+import { can } from '../../lib/permissions';
 
 interface AdminSidebarProps {
   collapsed: boolean;
@@ -44,8 +45,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [applicationsExpanded, setApplicationsExpanded] = useState(true);
+  const [adminExpanded, setAdminExpanded] = useState(true);
   const [financeExpanded, setFinanceExpanded] = useState(true);
+
+  // Check if current route is part of Admin section
+  const isAdminActive =
+    location.pathname === '/admin/module' ||
+    location.pathname.startsWith('/admin/admissions') ||
+    location.pathname.startsWith('/admin/applications') ||
+    location.pathname.startsWith('/admin/documents') ||
+    location.pathname.startsWith('/admin/faculties') ||
+    location.pathname.startsWith('/admin/departments') ||
+    location.pathname.startsWith('/admin/courses') ||
+    location.pathname.startsWith('/admin/fees') ||
+    location.pathname.startsWith('/admin/academic-years');
 
   // Fetch admin stats for pending badges
   const { data: stats } = useQuery({
@@ -60,10 +73,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     navigate('/login');
   };
 
-  const isAdmissions = user?.role === 'SYSTEM_ADMIN' || user?.role === 'ADMISSIONS_OFFICER';
-  const isFinance = user?.role === 'SYSTEM_ADMIN' || user?.role === 'FINANCE_OFFICER';
-  const isAdmin = user?.role === 'SYSTEM_ADMIN';
-  const canViewApplications = user?.role === 'SYSTEM_ADMIN' || user?.role === 'ADMISSIONS_OFFICER' || user?.role === 'FINANCE_OFFICER';
+  const isAdmin = can(user, 'academic-years:manage');
+  const isAdmissions = can(user, 'applications:review');
+  const isFinance = can(user, 'payments:write');
+
+  const canViewApplications = can(user, 'applications:read');
+  const canViewFinance = can(user, 'payments:read');
+  const canViewAcademics = can(user, 'academics:read');
+  const canViewAdminSection = isAdmissions || canViewAcademics || canViewApplications;
+  const canViewAuditLogs = can(user, 'audit:view');
+  const canViewUsers = can(user, 'users:manage');
+  const canViewSettings = can(user, 'settings:manage');
+  const canViewDocumentConfig = can(user, 'document-config:manage');
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#10223B] border-r border-[#1B2F4E] select-none text-slate-300">
@@ -125,19 +146,23 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           {!collapsed && <span>Dashboard</span>}
         </NavLink>
 
-        {/* 2. Applications (Admissions, Finance, & Admin) */}
-        {canViewApplications && (
+        {/* 2. Admin (Admissions & Academic Management) */}
+        {canViewAdminSection && (
           <div>
             {!collapsed ? (
               <div>
                 <button
                   type="button"
-                  onClick={() => setApplicationsExpanded(!applicationsExpanded)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                  onClick={() => setAdminExpanded(!adminExpanded)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                    isAdminActive
+                      ? 'bg-white/10 text-white font-semibold'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`}
                 >
                   <span className="flex items-center gap-3">
-                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    <span>Applications</span>
+                    <GraduationCap className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span>Admin</span>
                   </span>
                   <div className="flex items-center gap-1.5">
                     {stats?.underReview > 0 && (
@@ -147,134 +172,230 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     )}
                     <ChevronDown
                       className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-                        applicationsExpanded ? 'rotate-180' : ''
+                        adminExpanded ? 'rotate-180' : ''
                       }`}
                     />
                   </div>
                 </button>
 
-                {applicationsExpanded && (
-                  <div className="pl-8 pr-1 py-1 space-y-0.5">
+                {adminExpanded && (
+                  <div className="pl-6 pr-1 py-1 space-y-0.5 border-l border-white/10 ml-4 my-1">
+                    {/* Admin Hub */}
                     <NavLink
-                      to="/admin/applications"
+                      to="/admin/module"
                       end
                       onClick={() => onMobileClose()}
                       className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                          isActive && location.search === ''
+                        `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                          isActive
                             ? 'text-white font-semibold bg-white/10'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                         }`
                       }
                     >
-                      All Applications
+                      <LayoutDashboard className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      <span>Admin Hub</span>
                     </NavLink>
-                    <NavLink
-                      to="/admin/applications?status=UNDER_REVIEW"
-                      onClick={() => onMobileClose()}
-                      className={({ isActive }) =>
-                        `flex items-center justify-between px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                          location.search.includes('UNDER_REVIEW')
-                            ? 'text-white font-semibold bg-white/10'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`
-                      }
-                    >
-                      <span>Pending Review</span>
-                      {stats?.underReview > 0 && (
-                        <span className="px-1.5 py-0.2 bg-blue-400/20 text-blue-300 rounded font-bold text-[9px]">
-                          {stats.underReview}
-                        </span>
-                      )}
-                    </NavLink>
-                    <NavLink
-                      to="/admin/applications?status=APPROVED"
-                      onClick={() => onMobileClose()}
-                      className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                          location.search.includes('APPROVED')
-                            ? 'text-white font-semibold bg-white/10'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`
-                      }
-                    >
-                      Shortlisted / Accepted
-                    </NavLink>
-                    <NavLink
-                      to="/admin/applications?status=REJECTED"
-                      onClick={() => onMobileClose()}
-                      className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-                          location.search.includes('REJECTED')
-                            ? 'text-white font-semibold bg-white/10'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`
-                      }
-                    >
-                      Rejected
-                    </NavLink>
+
+                    {/* 1. Admission Dashboard */}
+                    {isAdmissions && (
+                      <NavLink
+                        to="/admin/admissions"
+                        end
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <FolderCheck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Admission Dashboard</span>
+                      </NavLink>
+                    )}
+
+                    {/* 2. Applications */}
+                    {canViewApplications && (
+                      <NavLink
+                        to="/admin/applications"
+                        end
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive && location.search === ''
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <FileText className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span>Applications</span>
+                        </div>
+                        {stats?.totalApplications > 0 && (
+                          <span className="text-[10px] text-slate-400 font-semibold">
+                            {stats.totalApplications}
+                          </span>
+                        )}
+                      </NavLink>
+                    )}
+
+                    {/* 3. Admission Review */}
+                    {isAdmissions && (
+                      <NavLink
+                        to="/admin/applications?status=UNDER_REVIEW"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            location.search.includes('UNDER_REVIEW')
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <CheckSquare className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span>Admission Review</span>
+                        </div>
+                        {stats?.underReview > 0 && (
+                          <span className="px-1.5 py-0.2 bg-blue-400/20 text-blue-300 rounded font-bold text-[9px]">
+                            {stats.underReview}
+                          </span>
+                        )}
+                      </NavLink>
+                    )}
+
+                    {/* 4. Applicant Documents */}
+                    {isAdmissions && (
+                      <NavLink
+                        to="/admin/documents"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <FolderCheck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Applicant Documents</span>
+                      </NavLink>
+                    )}
+
+                    {/* 5. Faculties */}
+                    {canViewAcademics && (
+                      <NavLink
+                        to="/admin/faculties"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Faculties</span>
+                      </NavLink>
+                    )}
+
+                    {/* 6. Departments */}
+                    {canViewAcademics && (
+                      <NavLink
+                        to="/admin/departments"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <Layers className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Departments</span>
+                      </NavLink>
+                    )}
+
+                    {/* 7. Courses */}
+                    {canViewAcademics && (
+                      <NavLink
+                        to="/admin/courses"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Courses &amp; Programmes</span>
+                      </NavLink>
+                    )}
+
+                    {/* 8. Admission Years / Intakes */}
+                    {isAdmin && (
+                      <NavLink
+                        to="/admin/academic-years"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Admission Years / Intakes</span>
+                      </NavLink>
+                    )}
+
+                    {/* 9. Application Fees */}
+                    {(isFinance || isAdmissions) && (
+                      <NavLink
+                        to="/admin/fees"
+                        onClick={() => onMobileClose()}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                            isActive
+                              ? 'text-white font-semibold bg-white/10'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <DollarSign className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span>Application Fees</span>
+                      </NavLink>
+                    )}
                   </div>
                 )}
               </div>
             ) : (
               <NavLink
-                to="/admin/applications"
+                to="/admin/module"
                 onClick={() => onMobileClose()}
-                title="Applications"
-                className={({ isActive }) =>
-                  `flex items-center justify-center p-2.5 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#1D3D6F] text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`
-                }
+                title="Admin"
+                className={`flex items-center justify-center p-2.5 rounded-lg text-xs font-medium transition-all ${
+                  isAdminActive
+                    ? 'bg-[#1D3D6F] text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
               >
-                <FileText className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4" />
               </NavLink>
             )}
           </div>
         )}
 
-        {/* 3. Applicant Documents */}
-        {isAdmissions && (
-          <NavLink
-            to="/admin/documents"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Applicant Documents' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <FolderCheck className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Applicant Documents</span>}
-          </NavLink>
-        )}
-
-        {/* 4. Admissions Review */}
-        {isAdmissions && (
-          <NavLink
-            to="/admin/applications"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Admissions Review' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive && location.search === ''
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <CheckSquare className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Admissions Review</span>}
-          </NavLink>
-        )}
-
-        {/* 5. Finance & Payments */}
-        {isFinance && (
+        {/* 3. Finance & Payments */}
+        {canViewFinance && (
           <div>
             {!collapsed ? (
               <div>
@@ -302,12 +423,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </button>
 
                 {financeExpanded && (
-                  <div className="pl-8 pr-1 py-1 space-y-0.5">
+                  <div className="pl-6 pr-1 py-1 space-y-0.5 border-l border-white/10 ml-4 my-1">
+                    <NavLink
+                      to="/admin/finance"
+                      onClick={() => onMobileClose()}
+                      className={({ isActive }) =>
+                        `block px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                          isActive
+                            ? 'text-white font-semibold bg-white/10'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`
+                      }
+                    >
+                      Finance Dashboard
+                    </NavLink>
                     <NavLink
                       to="/admin/payments?status=PENDING_VERIFICATION"
                       onClick={() => onMobileClose()}
                       className={({ isActive }) =>
-                        `flex items-center justify-between px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                        `flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
                           location.search.includes('PENDING_VERIFICATION')
                             ? 'text-white font-semibold bg-white/10'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -325,7 +459,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       to="/admin/payments?status=PAID"
                       onClick={() => onMobileClose()}
                       className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                        `block px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
                           location.search.includes('PAID')
                             ? 'text-white font-semibold bg-white/10'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -338,7 +472,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       to="/admin/payments"
                       onClick={() => onMobileClose()}
                       className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                        `block px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
                           location.pathname === '/admin/payments' && !location.search
                             ? 'text-white font-semibold bg-white/10'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -351,7 +485,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       to="/verify-token"
                       onClick={() => onMobileClose()}
                       className={({ isActive }) =>
-                        `block px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+                        `block px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
                           isActive
                             ? 'text-white font-semibold bg-white/10'
                             : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -380,101 +514,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </NavLink>
             )}
           </div>
-        )}
-
-        {/* 6. Faculties */}
-        {isAdmissions && (
-          <NavLink
-            to="/admin/faculties"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Faculties' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <Building2 className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Faculties</span>}
-          </NavLink>
-        )}
-
-        {/* 6b. Departments */}
-        {isAdmissions && (
-          <NavLink
-            to="/admin/departments"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Departments' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <Layers className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Departments</span>}
-          </NavLink>
-        )}
-
-        {/* 7. Courses */}
-        {isAdmissions && (
-          <NavLink
-            to="/admin/courses"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Courses' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <BookOpen className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Courses</span>}
-          </NavLink>
-        )}
-
-        {/* 7. Admission Years / Intakes */}
-        {isAdmin && (
-          <NavLink
-            to="/admin/academic-years"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Admission Years / Intakes' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <Calendar className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Admission Years / Intakes</span>}
-          </NavLink>
-        )}
-
-        {/* 8. Application Fees */}
-        {(isFinance || isAdmissions) && (
-          <NavLink
-            to="/admin/fees"
-            onClick={() => onMobileClose()}
-            title={collapsed ? 'Application Fees' : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <DollarSign className="w-4 h-4 flex-shrink-0 text-slate-400" />
-            {!collapsed && <span>Application Fees</span>}
-          </NavLink>
         )}
 
         {/* 9. Reports & Exports */}
@@ -512,7 +551,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </NavLink>
 
         {/* 11. User & Staff Management */}
-        {isAdmin && (
+        {canViewUsers && (
           <NavLink
             to="/admin/users"
             onClick={() => onMobileClose()}
@@ -531,7 +570,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
 
         {/* 12. Audit Logs */}
-        {isAdmin && (
+        {canViewAuditLogs && (
           <NavLink
             to="/admin/audit"
             onClick={() => onMobileClose()}
@@ -549,8 +588,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </NavLink>
         )}
 
-        {/* 13. System Settings */}
-        {isAdmin && (
+        {/* 13. Document & Letter Configuration */}
+        {canViewDocumentConfig && (
+          <NavLink
+            to="/admin/document-config"
+            onClick={() => onMobileClose()}
+            title={collapsed ? 'Document & Letter Config' : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                isActive
+                  ? 'bg-[#1D3D6F] text-white shadow-sm font-semibold'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`
+            }
+          >
+            <FileText className="w-4 h-4 flex-shrink-0 text-slate-400" />
+            {!collapsed && <span>Document &amp; Letter Config</span>}
+          </NavLink>
+        )}
+
+        {/* 14. System Settings (Super Admin Only) */}
+        {canViewSettings && (
           <NavLink
             to="/admin/settings"
             onClick={() => onMobileClose()}

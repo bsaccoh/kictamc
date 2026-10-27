@@ -63,20 +63,21 @@ export const StudentLayout: React.FC = () => {
 
   // Derive human-readable page title from path matching reference image
   const getHeaderTitle = () => {
+    const isEnrolled = user?.role === 'STUDENT';
     const path = location.pathname;
-    if (path.startsWith('/dashboard')) return 'Student Dashboard';
-    if (path.startsWith('/apply')) return 'My Application';
+    if (path.startsWith('/dashboard')) return isEnrolled ? 'Student Dashboard' : 'Applicant Dashboard';
+    if (path.startsWith('/apply')) return isEnrolled ? 'Enrolment Dossier' : 'My Application';
     if (path.startsWith('/profile')) return 'My Profile';
     if (path.startsWith('/programmes')) return 'Programme Selection';
     if (path.startsWith('/documents')) return 'Documents';
-    if (path.startsWith('/payment')) return 'Application Fee & Payments';
+    if (path.startsWith('/payment')) return isEnrolled ? 'Tuition & Fees Ledger' : 'Application Fee & Payments';
     if (path.startsWith('/tracking')) return 'Application Tracking';
     if (path.startsWith('/receipt')) return 'Receipts & Payment Token';
     if (path.startsWith('/admission-letter')) return 'Official Admission Letter';
     if (path.startsWith('/notifications')) return 'Notifications';
     if (path.startsWith('/support')) return 'Help & Support';
     if (path.startsWith('/settings')) return 'Settings';
-    return 'Student Portal';
+    return isEnrolled ? 'Student Portal' : 'Applicant Portal';
   };
 
   const handleSignOut = async () => {
@@ -221,10 +222,10 @@ export const StudentLayout: React.FC = () => {
                 </div>
                 <div className="hidden sm:block text-left">
                   <div className="text-xs font-bold text-slate-800 leading-tight">
-                    {user.firstName || 'John'} {user.surname || 'Doe'}
+                    {user.firstName || 'User'} {user.surname || ''}
                   </div>
                   <div className="text-[10px] text-slate-500 font-medium">
-                    Student
+                    {user.role === 'STUDENT' ? 'Enrolled Student' : 'Prospective Applicant'}
                   </div>
                 </div>
               </button>

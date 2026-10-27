@@ -32,16 +32,22 @@ export const ReportsPage: React.FC = () => {
   });
 
   // Fetch applications list for report aggregations
-  const { data: applications = [], isLoading: appsLoading } = useQuery({
+  const { data: applicationsResp, isLoading: appsLoading } = useQuery({
     queryKey: ['admin-applications-report'],
-    queryFn: () => api.get<any[]>('/admin/applications'),
+    queryFn: () => api.get<any>('/admin/applications?limit=500'),
   });
+  const applications: any[] = Array.isArray(applicationsResp)
+    ? applicationsResp
+    : (applicationsResp?.items ?? []);
 
   // Fetch payments list for revenue calculations
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+  const { data: paymentsResp, isLoading: paymentsLoading } = useQuery({
     queryKey: ['admin-payments-report'],
-    queryFn: () => api.get<any[]>('/admin/payments'),
+    queryFn: () => api.get<any>('/admin/payments?limit=500'),
   });
+  const payments: any[] = Array.isArray(paymentsResp)
+    ? paymentsResp
+    : (paymentsResp?.items ?? []);
 
   // Fetch courses
   const { data: courses = [] } = useQuery({

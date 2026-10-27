@@ -32,6 +32,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
+import { ActionMenu } from '../../components/ui/ActionMenu';
 
 interface DepartmentResponse {
   departments: Department[];
@@ -77,9 +78,6 @@ export const DepartmentListPage: React.FC = () => {
 
   // Safe Delete State
   const [deleteDept, setDeleteDept] = useState<Department | null>(null);
-
-  // Active Action Menu dropdown state
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
 
   // 1. Fetch faculties for dropdown selector
   const { data: facultiesRaw = [] } = useQuery({
@@ -204,7 +202,6 @@ export const DepartmentListPage: React.FC = () => {
     });
     setFormErrors({});
     setIsModalOpen(true);
-    setOpenActionId(null);
   };
 
   const validateForm = () => {
@@ -602,75 +599,40 @@ export const DepartmentListPage: React.FC = () => {
                         </button>
                       </td>
 
-                      {/* Actions Dropdown */}
-                      <td className="py-3.5 px-4 text-right relative">
-                        <div className="inline-block text-left">
-                          <button
-                            onClick={() => setOpenActionId(openActionId === dept.id ? null : dept.id)}
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-
-                          {openActionId === dept.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-20"
-                                onClick={() => setOpenActionId(null)}
-                              />
-                              <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-slate-200 z-30 py-1 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
-                                <div className="py-0.5">
-                                  <Link
-                                    to={`/admin/departments/${dept.id}`}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-50 transition-colors"
-                                    onClick={() => setOpenActionId(null)}
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-slate-400" />
-                                    <span>View Details</span>
-                                  </Link>
-                                  <button
-                                    onClick={() => handleOpenEdit(dept)}
-                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-50 transition-colors text-left"
-                                  >
-                                    <Edit className="h-3.5 w-3.5 text-slate-400" />
-                                    <span>Edit Department</span>
-                                  </button>
-                                </div>
-                                <div className="py-0.5">
-                                  <button
-                                    onClick={() => {
-                                      toggleStatusMutation.mutate({ id: dept.id, isActive: !dept.isActive });
-                                      setOpenActionId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:bg-slate-50 transition-colors text-left"
-                                  >
-                                    {dept.isActive ? (
-                                      <>
-                                        <XCircle className="h-3.5 w-3.5 text-amber-500" />
-                                        <span>Deactivate</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                                        <span>Activate</span>
-                                      </>
-                                    )}
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setDeleteDept(dept);
-                                      setOpenActionId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-                                    <span>Delete</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                      {/* Actions Menu */}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <ActionMenu
+                          label={`Actions for ${dept.name}`}
+                          items={[
+                            {
+                              label: 'View Details',
+                              icon: <Eye className="w-3.5 h-3.5 text-slate-500" />,
+                              to: `/admin/departments/${dept.id}`,
+                            },
+                            {
+                              label: 'Edit Department',
+                              icon: <Edit className="w-3.5 h-3.5 text-slate-500" />,
+                              onClick: () => handleOpenEdit(dept),
+                            },
+                            {
+                              label: dept.isActive ? 'Deactivate' : 'Activate',
+                              icon: dept.isActive ? (
+                                <XCircle className="w-3.5 h-3.5 text-amber-500" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                              ),
+                              onClick: () =>
+                                toggleStatusMutation.mutate({ id: dept.id, isActive: !dept.isActive }),
+                              variant: dept.isActive ? 'warning' : 'default',
+                            },
+                            {
+                              label: 'Delete Department',
+                              icon: <Trash2 className="w-3.5 h-3.5 text-rose-500" />,
+                              onClick: () => setDeleteDept(dept),
+                              variant: 'danger',
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   );

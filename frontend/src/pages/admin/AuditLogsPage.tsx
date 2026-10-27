@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ShieldAlert,
@@ -12,25 +12,34 @@ import {
   Download
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { Pagination } from '../../components/ui/Pagination';
+import { usePagination, type PaginatedResponse } from '../../hooks/usePagination';
 
 export const AuditLogsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
 
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ['admin-audit-logs'],
-    queryFn: () => api.get<any[]>('/admin/audit-logs'),
+  const { page, limit, setPage, reset: resetPagination } = usePagination(15);
+  useEffect(() => {
+    resetPagination();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, actionFilter]);
+
+  const { data: paginated, isLoading } = useQuery({
+    queryKey: ['admin-audit-logs', searchTerm, actionFilter, page, limit],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) params.append('search', searchTerm.trim());
+      if (actionFilter !== 'ALL') params.append('action', actionFilter);
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+      return api.get<PaginatedResponse<any>>(`/admin/audit-logs?${params.toString()}`);
+    },
   });
 
-  const filteredLogs = logs.filter((log) => {
-    const matchesAction = actionFilter === 'ALL' || log.action === actionFilter;
-    const matchesSearch =
-      searchTerm.trim() === '' ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.resource?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesAction && matchesSearch;
-  });
+  const logs = paginated?.items ?? [];
+  const pagination = paginated?.pagination;
+  const filteredLogs = logs;
 
   const handleExportAuditCSV = () => {
     if (filteredLogs.length === 0) return;
@@ -183,6 +192,15 @@ export const AuditLogsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {pagination && pagination.total > 0 && (
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
+        )}
       </div>
     </div>
   );

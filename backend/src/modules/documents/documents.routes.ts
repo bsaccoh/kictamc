@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { documentsController } from './documents.controller';
-import { requireAuth, requireRole } from '../../middleware/auth';
-import { Role } from '@prisma/client';
+import { requireAuth } from '../../middleware/auth';
+import { requireCapability } from '../../middleware/capabilities';
 import { config } from '../../config';
 
 const router = Router();
@@ -30,18 +30,17 @@ router.delete(
 // Secure streaming / download (applicants & authorized staff)
 router.get('/documents/:id/file', requireAuth, documentsController.downloadOrStreamDocument);
 
-// Staff document verification (Admissions Officers & Admins)
-const staffRoles = [Role.SYSTEM_ADMIN, Role.ADMISSIONS_OFFICER];
+// Staff document verification (Admissions Officers, Compliance & Admins)
 router.post(
   '/admin/documents/:id/verify',
   requireAuth,
-  requireRole(staffRoles),
+  requireCapability('documents:verify'),
   documentsController.verifyDocument
 );
 router.post(
   '/admin/documents/:id/reject',
   requireAuth,
-  requireRole(staffRoles),
+  requireCapability('documents:verify'),
   documentsController.rejectDocument
 );
 

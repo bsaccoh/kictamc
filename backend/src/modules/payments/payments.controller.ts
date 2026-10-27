@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { paymentsService } from './payments.service';
 import { sendSuccess, sendCreated } from '../../utils/response';
+import { parsePagination, buildPaginatedResult } from '../../utils/pagination';
 import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import fs from 'fs';
 import { prisma } from '../../utils/prisma';
@@ -88,12 +89,29 @@ export class PaymentsController {
   async listPayments(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { status, paymentType, search } = req.query;
-      const payments = await paymentsService.listPayments({
+      const pagination = parsePagination(req);
+      const { items, total } = await paymentsService.listPayments({
         status: status as PaymentStatus,
         paymentType: paymentType as string,
         search: search as string,
+        skip: pagination.skip,
+        take: pagination.take,
       });
-      return sendSuccess(res, payments, 'Payments ledger retrieved.');
+      return sendSuccess(
+        res,
+        buildPaginatedResult(items, total, pagination),
+        'Payments ledger retrieved.'
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFinanceDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const period = (req.query.period as string) || '30d';
+      const dashboard = await paymentsService.getFinanceDashboardData(period);
+      return sendSuccess(res, dashboard, 'Finance dashboard retrieved successfully.');
     } catch (error) {
       next(error);
     }
@@ -113,7 +131,7 @@ export class PaymentsController {
 
       // Authorization check
       if (
-        req.user!.role === 'APPLICANT' &&
+        (req.user!.role === 'APPLICANT' || req.user!.role === 'STUDENT') &&
         payment.application.applicantId !== req.user!.userId
       ) {
         throw new AppError('Access forbidden', 403);
@@ -132,3 +150,4 @@ export class PaymentsController {
 }
 
 export const paymentsController = new PaymentsController();
+

@@ -173,7 +173,7 @@ export class DocumentsService {
 
     if (!doc) throw new AppError('Document not found', 404);
 
-    const isStaff = userRole !== Role.APPLICANT;
+    const isStaff = userRole !== Role.APPLICANT && userRole !== Role.STUDENT;
     if (!isStaff && doc.application.applicantId !== userId) {
       throw new AppError('Access forbidden: You cannot view this document.', 403);
     }

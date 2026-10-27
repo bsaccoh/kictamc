@@ -1,4 +1,4 @@
-import { PrismaClient, Role, QualificationLevel, DocumentType } from '@prisma/client';
+import { PrismaClient, Role, QualificationLevel, DocumentType, ApplicationStatus, PaymentStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -30,30 +30,74 @@ async function main() {
   await prisma.user.deleteMany();
 
   // 2. Seed Users
-  const adminPasswordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD || 'ChangeMeInDev2026!');
-  const admissionsPasswordHash = await hashPassword(process.env.SEED_ADMISSIONS_PASSWORD || 'ChangeMeInDev2026!');
-  const financePasswordHash = await hashPassword(process.env.SEED_FINANCE_PASSWORD || 'ChangeMeInDev2026!');
-  const applicantPasswordHash = await hashPassword(process.env.SEED_APPLICANT_PASSWORD || 'ChangeMeInDev2026!');
+  const defaultPasswordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD || 'ChangeMeInDev2026!');
 
-  const admin = await prisma.user.create({
+  // 2a. Super Admin
+  const superAdmin = await prisma.user.create({
     data: {
       email: 'admin@kictamc.edu.sl',
       phone: '+23276100001',
-      passwordHash: adminPasswordHash,
+      passwordHash: defaultPasswordHash,
       firstName: 'Alhaji',
       middleName: 'M.',
       surname: 'Kamara',
-      role: Role.SYSTEM_ADMIN,
+      role: Role.SUPER_ADMIN,
       isEmailVerified: true,
       isPhoneVerified: true,
     },
   });
 
+  // 2b. College Admin (Operational Admin)
+  const collegeAdmin = await prisma.user.create({
+    data: {
+      email: 'admin.staff@kictamc.edu.sl',
+      phone: '+23276100010',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Ibrahim',
+      middleName: 'K.',
+      surname: 'Conteh',
+      role: Role.ADMIN,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+    },
+  });
+
+  // 2c. Compliance Officer (View and Logs only)
+  const complianceOfficer = await prisma.user.create({
+    data: {
+      email: 'compliance@kictamc.edu.sl',
+      phone: '+23276100011',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Hawa',
+      middleName: 'T.',
+      surname: 'Bangura',
+      role: Role.COMPLIANCE,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+    },
+  });
+
+  // 2d. Lecturer (Academic Staff)
+  const lecturer = await prisma.user.create({
+    data: {
+      email: 'lecturer@kictamc.edu.sl',
+      phone: '+23276100012',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Dr. Joseph',
+      middleName: 'B.',
+      surname: 'Tarawally',
+      role: Role.LECTURER,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+    },
+  });
+
+  // 2e. Admissions Officer
   const admissionsOfficer = await prisma.user.create({
     data: {
       email: 'admissions@kictamc.edu.sl',
       phone: '+23276100002',
-      passwordHash: admissionsPasswordHash,
+      passwordHash: defaultPasswordHash,
       firstName: 'Fatmata',
       middleName: 'B.',
       surname: 'Sesay',
@@ -63,11 +107,12 @@ async function main() {
     },
   });
 
+  // 2f. Finance Officer
   const financeOfficer = await prisma.user.create({
     data: {
       email: 'finance@kictamc.edu.sl',
       phone: '+23276100003',
-      passwordHash: financePasswordHash,
+      passwordHash: defaultPasswordHash,
       firstName: 'Mohamed',
       middleName: 'S.',
       surname: 'Koroma',
@@ -77,11 +122,12 @@ async function main() {
     },
   });
 
+  // 2g. Prospective Applicant (In Progress)
   const sampleApplicant = await prisma.user.create({
     data: {
       email: 'applicant@kictamc.edu.sl',
       phone: '+23278200001',
-      passwordHash: applicantPasswordHash,
+      passwordHash: defaultPasswordHash,
       firstName: 'Mariama',
       middleName: 'Kallon',
       surname: 'Bangura',
@@ -114,7 +160,45 @@ async function main() {
     },
   });
 
-  console.log('✓ Users created: Admin, Admissions, Finance, Applicant');
+  // 2h. Enrolled Student (Accepted, Enrolled, Matriculated)
+  const sampleStudent = await prisma.user.create({
+    data: {
+      email: 'student@kictamc.edu.sl',
+      phone: '+23278200099',
+      passwordHash: defaultPasswordHash,
+      firstName: 'Abu',
+      middleName: 'Bakarr',
+      surname: 'Kamara',
+      role: Role.STUDENT,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      studentProfile: {
+        create: {
+          dateOfBirth: new Date('2003-08-20'),
+          gender: 'Male',
+          nationality: 'Sierra Leonean',
+          placeOfBirth: 'Freetown',
+          maritalStatus: 'Single',
+          residentialAddress: '25 Wilkinson Road',
+          townCity: 'Freetown',
+          chiefdom: 'Western Area Urban',
+          district: 'Western Area Urban',
+          regionProvince: 'Western Area',
+          postalAddress: 'P.O. Box 101, Freetown',
+          parentFullName: 'Santigie Kamara',
+          parentRelationship: 'Father',
+          parentPhone: '+23277000111',
+          parentAddress: '25 Wilkinson Road, Freetown',
+          parentOccupation: 'Lecturer',
+          emergencyFullName: 'Santigie Kamara',
+          emergencyRelationship: 'Father',
+          emergencyPhone: '+23277000111',
+        },
+      },
+    },
+  });
+
+  console.log('✓ Users created: Super Admin, Admin, Compliance, Lecturer, Admissions, Finance, Applicant, Student');
 
   // 3. Seed Academic Year & Intakes
   const academicYear = await prisma.academicYear.create({
@@ -276,6 +360,7 @@ async function main() {
     },
   ];
 
+  const allCreatedCourses: any[] = [];
   for (const c of coursesData) {
     const createdCourse = await prisma.course.create({
       data: c,
@@ -291,19 +376,89 @@ async function main() {
         },
       });
     }
+
+    allCreatedCourses.push(createdCourse);
   }
 
   console.log(`✓ Created ${coursesData.length} courses with document requirements`);
 
-  // 6. Record audit log for database seed
+  // 6. Seed Sample Application for APPLICANT (Under Review, not enrolled yet)
+  const defaultIntake = academicYear.intakes[0];
+  const itDegreeCourse = allCreatedCourses.find((c) => c.code === 'BIT-301') || allCreatedCourses[0];
+  const diplomaCourse = allCreatedCourses.find((c) => c.code === 'DIT-L10') || allCreatedCourses[0];
+
+  await prisma.application.create({
+    data: {
+      applicationReference: 'KICTAMC-2026-000101',
+      applicantId: sampleApplicant.id,
+      academicYearId: academicYear.id,
+      intakeId: defaultIntake.id,
+      courseId: diplomaCourse.id,
+      studyMode: 'Full-Time',
+      preferredCampus: 'Kenema Main Campus',
+      status: ApplicationStatus.UNDER_REVIEW,
+      paymentStatus: PaymentStatus.PAID,
+      currentStep: 4,
+      submittedAt: new Date(),
+      declarationAccepted: true,
+      declarationAcceptedAt: new Date(),
+      courseNameSnapshot: diplomaCourse.name,
+      courseCodeSnapshot: diplomaCourse.code,
+      courseLevelSnapshot: diplomaCourse.qualificationLevel,
+      departmentNameSnapshot: deptICT.name,
+      applicationFeeMinorSnapshot: diplomaCourse.applicationFeeMinor,
+      currencySnapshot: diplomaCourse.currency,
+    },
+  });
+
+  // 7. Seed Sample Application for STUDENT (Enrolled & Matriculated)
+  await prisma.application.create({
+    data: {
+      applicationReference: 'KICTAMC-2026-000088',
+      applicantId: sampleStudent.id,
+      academicYearId: academicYear.id,
+      intakeId: defaultIntake.id,
+      courseId: itDegreeCourse.id,
+      studyMode: 'Full-Time',
+      preferredCampus: 'Kenema Main Campus',
+      status: ApplicationStatus.APPROVED,
+      paymentStatus: PaymentStatus.PAID,
+      currentStep: 4,
+      submittedAt: new Date('2026-09-02'),
+      decisionAt: new Date('2026-09-10'),
+      decidedByUserId: superAdmin.id,
+      decisionRemarks: 'Applicant meets all academic and departmental requirements. Full admission offered.',
+      declarationAccepted: true,
+      declarationAcceptedAt: new Date('2026-09-02'),
+      offerAccepted: true,
+      offerAcceptedAt: new Date('2026-09-12'),
+      acceptanceLetterPublished: true,
+      acceptanceLetterPublishedAt: new Date('2026-09-10'),
+      matriculationNumber: 'KICTAMC/2026/BIT/0001',
+      isEnrolled: true,
+      enrolledAt: new Date('2026-09-15'),
+      matriculationFeePaid: true,
+      matriculationFeeMinor: 50000,
+      courseNameSnapshot: itDegreeCourse.name,
+      courseCodeSnapshot: itDegreeCourse.code,
+      courseLevelSnapshot: itDegreeCourse.qualificationLevel,
+      departmentNameSnapshot: deptICT.name,
+      applicationFeeMinorSnapshot: itDegreeCourse.applicationFeeMinor,
+      currencySnapshot: itDegreeCourse.currency,
+    },
+  });
+
+  console.log('✓ Seeded applications: 1 Under Review for Applicant, 1 Enrolled for Student');
+
+  // 8. Record audit log for database seed
   await prisma.auditLog.create({
     data: {
-      userId: admin.id,
-      userEmail: admin.email,
+      userId: superAdmin.id,
+      userEmail: superAdmin.email,
       action: 'SYSTEM_SEED',
       resource: 'Database',
       details: {
-        note: 'Initial setup of KICTAMC portal with departments, academic years, courses, and default administrative accounts.',
+        note: 'Initial setup of KICTAMC portal with Super Admin, Admin, Compliance, Lecturer, Admissions, Finance, Applicant, and Student accounts.',
       },
     },
   });

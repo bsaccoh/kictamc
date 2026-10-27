@@ -108,6 +108,21 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
       {/* Navigation Menu Items */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin">
+        {!collapsed && (
+          <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Portal</span>
+            {user?.role === 'STUDENT' ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Enrolled Student
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Admissions Applicant
+              </span>
+            )}
+          </div>
+        )}
+
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;

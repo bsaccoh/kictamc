@@ -1,5 +1,5 @@
 import { prisma } from '../../utils/prisma';
-import { ApplicationStatus, PaymentStatus } from '@prisma/client';
+import { ApplicationStatus, PaymentStatus, Role } from '@prisma/client';
 import { generateApplicationReference } from '../../utils/tokens';
 import { AppError } from '../../middleware/errorHandler';
 
@@ -115,58 +115,69 @@ export class ApplicationsService {
     departmentId?: string;
     interviewStatus?: string;
     search?: string;
+    skip?: number;
+    take?: number;
   }) {
-    const { status, academicYearId, courseId, facultyId, departmentId, interviewStatus, search } = params;
+    const { status, academicYearId, courseId, facultyId, departmentId, interviewStatus, search, skip, take } = params;
 
     const courseWhere: any = {};
     if (courseId && courseId !== 'ALL') courseWhere.id = courseId;
     if (facultyId && facultyId !== 'ALL') courseWhere.facultyId = facultyId;
     if (departmentId && departmentId !== 'ALL') courseWhere.departmentId = departmentId;
 
-    return prisma.application.findMany({
-      where: {
-        ...(status && { status }),
-        ...(academicYearId && academicYearId !== 'ALL' && { academicYearId }),
-        ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
-        ...(interviewStatus && interviewStatus !== 'ALL' && { interviewStatus }),
-        ...(search && {
-          OR: [
-            { applicationReference: { contains: search, mode: 'insensitive' } },
-            { applicant: { firstName: { contains: search, mode: 'insensitive' } } },
-            { applicant: { surname: { contains: search, mode: 'insensitive' } } },
-            { applicant: { email: { contains: search, mode: 'insensitive' } } },
-            { applicant: { phone: { contains: search } } },
-          ],
-        }),
-      },
-      include: {
-        applicant: {
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            firstName: true,
-            middleName: true,
-            surname: true,
-            studentProfile: true,
+    const where = {
+      ...(status && { status }),
+      ...(academicYearId && academicYearId !== 'ALL' && { academicYearId }),
+      ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
+      ...(interviewStatus && interviewStatus !== 'ALL' && { interviewStatus }),
+      ...(search && {
+        OR: [
+          { applicationReference: { contains: search, mode: 'insensitive' as const } },
+          { applicant: { firstName: { contains: search, mode: 'insensitive' as const } } },
+          { applicant: { surname: { contains: search, mode: 'insensitive' as const } } },
+          { applicant: { email: { contains: search, mode: 'insensitive' as const } } },
+          { applicant: { phone: { contains: search } } },
+        ],
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.application.findMany({
+        where,
+        include: {
+          applicant: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              firstName: true,
+              middleName: true,
+              surname: true,
+              studentProfile: true,
+            },
           },
-        },
-        academicYear: true,
-        intake: true,
-        course: {
-          include: {
-            department: true,
-            faculty: true,
+          academicYear: true,
+          intake: true,
+          course: {
+            include: {
+              department: true,
+              faculty: true,
+            },
           },
+          documents: true,
+          payments: {
+            include: { confirmationToken: true },
+          },
+          confirmationToken: true,
         },
-        documents: true,
-        payments: {
-          include: { confirmationToken: true },
-        },
-        confirmationToken: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        ...(typeof skip === 'number' && { skip }),
+        ...(typeof take === 'number' && { take }),
+      }),
+      prisma.application.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
   async getApplicationById(id: string, userId: string, isStaff = false) {
@@ -1241,6 +1252,12 @@ export class ApplicationsService {
           applicant: true,
           academicYear: true,
         },
+      });
+
+      // Elevate applicant user role to full STUDENT upon enrollment
+      await tx.user.update({
+        where: { id: app.applicantId },
+        data: { role: Role.STUDENT },
       });
 
       await tx.applicationStatusHistory.create({

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { paymentsController } from './payments.controller';
-import { requireAuth, requireRole } from '../../middleware/auth';
-import { Role } from '@prisma/client';
+import { requireAuth } from '../../middleware/auth';
+import { requireCapability } from '../../middleware/capabilities';
 import { config } from '../../config';
 import { validateRequest } from '../../middleware/validator';
 import { rejectPaymentSchema } from './payments.schemas';
@@ -21,8 +21,6 @@ router.get('/tokens/:token', paymentsController.lookupToken);
 
 router.use(requireAuth);
 
-const financeRoles = [Role.SYSTEM_ADMIN, Role.FINANCE_OFFICER];
-
 // Student manual payment submission
 router.post(
   '/applications/:id/payments',
@@ -40,15 +38,20 @@ router.post(
 router.get('/payments/:id/receipt-file', paymentsController.streamReceiptImage);
 
 // Finance Administration
-router.get('/admin/payments', requireRole(financeRoles), paymentsController.listPayments);
+router.get(
+  '/admin/payments/dashboard',
+  requireCapability('payments:read'),
+  paymentsController.getFinanceDashboard
+);
+router.get('/admin/payments', requireCapability('payments:read'), paymentsController.listPayments);
 router.post(
   '/admin/payments/:id/verify',
-  requireRole(financeRoles),
+  requireCapability('payments:write'),
   paymentsController.verifyPayment
 );
 router.post(
   '/admin/payments/:id/reject',
-  requireRole(financeRoles),
+  requireCapability('payments:write'),
   validateRequest(rejectPaymentSchema),
   paymentsController.rejectPayment
 );

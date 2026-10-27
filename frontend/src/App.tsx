@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { RequireCapability } from './components/auth/RequireCapability';
+import { isStaff } from './lib/permissions';
 
 // Layouts
 import { StudentLayout } from './layouts/StudentLayout';
@@ -51,11 +53,15 @@ import { NotificationsInboxPage } from './pages/dashboard/NotificationsInboxPage
 
 // Admin Portal Pages
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminModulePage } from './pages/admin/AdminModulePage';
+import { AdmissionsDashboardPage } from './pages/admin/AdmissionsDashboardPage';
 import { ApplicationListPage } from './pages/admin/ApplicationListPage';
 import { ApplicationDetailPage } from './pages/admin/ApplicationDetailPage';
 import { DocumentVerificationPage } from './pages/admin/DocumentVerificationPage';
 import { PaymentLedgerPage } from './pages/admin/PaymentLedgerPage';
+import { FinanceDashboardPage } from './pages/admin/FinanceDashboardPage';
 import { FacultyListPage } from './pages/admin/FacultyListPage';
+
 import { FacultyDetailPage } from './pages/admin/FacultyDetailPage';
 import { DepartmentListPage } from './pages/admin/DepartmentListPage';
 import { DepartmentDetailPage } from './pages/admin/DepartmentDetailPage';
@@ -67,6 +73,7 @@ import { ReportsPage } from './pages/admin/ReportsPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { DocumentConfigPage } from './pages/admin/DocumentConfigPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,8 +99,11 @@ const RootRedirect: React.FC = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'APPLICANT') return <Navigate to="/dashboard" replace />;
-  return <Navigate to="/admin" replace />;
+  if (user.role === 'APPLICANT' || user.role === 'STUDENT') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  if (isStaff(user)) return <Navigate to="/admin" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 export const App: React.FC = () => {
@@ -135,24 +145,29 @@ export const App: React.FC = () => {
             {/* Authenticated Admin & Staff Portal Routes (With Persistent Left Sidebar & RBAC) */}
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/admin/applications" element={<ApplicationListPage />} />
-              <Route path="/admin/applications/:id" element={<ApplicationDetailPage />} />
-              <Route path="/admin/admission-letter/:id" element={<AdmissionLetterPage />} />
-              <Route path="/admin/documents" element={<DocumentVerificationPage />} />
-              <Route path="/admin/payments" element={<PaymentLedgerPage />} />
-              <Route path="/admin/faculties" element={<FacultyListPage />} />
-              <Route path="/admin/faculties/:id" element={<FacultyDetailPage />} />
-              <Route path="/admin/departments" element={<DepartmentListPage />} />
-              <Route path="/admin/departments/:id" element={<DepartmentDetailPage />} />
-              <Route path="/admin/courses" element={<CourseManagementPage />} />
-              <Route path="/admin/courses/:id" element={<CourseDetailPage />} />
-              <Route path="/admin/fees" element={<ApplicationFeesPage />} />
-              <Route path="/admin/academic-years" element={<AcademicYearPage />} />
-              <Route path="/admin/reports" element={<ReportsPage />} />
+              <Route path="/admin/module" element={<AdminModulePage />} />
+              <Route path="/admin/admissions" element={<AdmissionsDashboardPage />} />
+              <Route path="/admin/applications" element={<RequireCapability capability="applications:read"><ApplicationListPage /></RequireCapability>} />
+              <Route path="/admin/applications/:id" element={<RequireCapability capability="applications:read"><ApplicationDetailPage /></RequireCapability>} />
+              <Route path="/admin/admission-letter/:id" element={<RequireCapability capability="admission-letter:issue"><AdmissionLetterPage /></RequireCapability>} />
+              <Route path="/admin/documents" element={<RequireCapability capability="documents:verify"><DocumentVerificationPage /></RequireCapability>} />
+              <Route path="/admin/finance" element={<RequireCapability capability="payments:read"><FinanceDashboardPage /></RequireCapability>} />
+              <Route path="/admin/payments" element={<RequireCapability capability="payments:read"><PaymentLedgerPage /></RequireCapability>} />
+              <Route path="/admin/faculties" element={<RequireCapability capability="academics:read"><FacultyListPage /></RequireCapability>} />
+
+              <Route path="/admin/faculties/:id" element={<RequireCapability capability="academics:read"><FacultyDetailPage /></RequireCapability>} />
+              <Route path="/admin/departments" element={<RequireCapability capability="academics:read"><DepartmentListPage /></RequireCapability>} />
+              <Route path="/admin/departments/:id" element={<RequireCapability capability="academics:read"><DepartmentDetailPage /></RequireCapability>} />
+              <Route path="/admin/courses" element={<RequireCapability capability="academics:read"><CourseManagementPage /></RequireCapability>} />
+              <Route path="/admin/courses/:id" element={<RequireCapability capability="academics:read"><CourseDetailPage /></RequireCapability>} />
+              <Route path="/admin/fees" element={<RequireCapability capability="fees:manage"><ApplicationFeesPage /></RequireCapability>} />
+              <Route path="/admin/academic-years" element={<RequireCapability capability="academic-years:manage"><AcademicYearPage /></RequireCapability>} />
+              <Route path="/admin/reports" element={<RequireCapability capability="reports:view"><ReportsPage /></RequireCapability>} />
               <Route path="/admin/notifications" element={<NotificationsInboxPage />} />
-              <Route path="/admin/users" element={<UserManagementPage />} />
-              <Route path="/admin/audit" element={<AuditLogsPage />} />
-              <Route path="/admin/settings" element={<AdminSettingsPage />} />
+              <Route path="/admin/users" element={<RequireCapability capability="users:manage"><UserManagementPage /></RequireCapability>} />
+              <Route path="/admin/audit" element={<RequireCapability capability="audit:view"><AuditLogsPage /></RequireCapability>} />
+              <Route path="/admin/settings" element={<RequireCapability capability="settings:manage"><AdminSettingsPage /></RequireCapability>} />
+              <Route path="/admin/document-config" element={<RequireCapability capability="document-config:manage"><DocumentConfigPage /></RequireCapability>} />
             </Route>
 
             {/* Public Institutional Website Routes */}

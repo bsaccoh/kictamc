@@ -32,15 +32,29 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { ActionMenu } from '../../components/ui/ActionMenu';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Pagination } from '../../components/ui/Pagination';
+import { usePagination, type PaginatedResponse } from '../../hooks/usePagination';
 import { Faculty, Department } from '../../types/academic';
+import { AddStudentModal } from '../../components/admin/AddStudentModal';
 
 export const ApplicationListPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const canAddStudent =
+    currentUser?.role === 'SUPER_ADMIN' ||
+    currentUser?.role === 'SYSTEM_ADMIN' ||
+    currentUser?.role === 'ADMIN' ||
+    currentUser?.role === 'ADMISSIONS_OFFICER';
+
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlStatus = searchParams.get('status') || 'ALL';
+
+  // Add Student Modal State
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,8 +135,17 @@ export const ApplicationListPage: React.FC = () => {
     },
   });
 
+  // Pagination (page/limit in URL, defaults 1/15)
+  const { page, limit, setPage, reset: resetPagination } = usePagination(15);
+
+  // Reset to page 1 whenever filters/search change
+  useEffect(() => {
+    resetPagination();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, facultyFilter, departmentFilter, courseFilter, interviewStatusFilter, searchTerm]);
+
   // 4. Fetch Applications with rich filters
-  const { data: applications = [], isLoading, refetch } = useQuery({
+  const { data: paginated, isLoading, refetch } = useQuery({
     queryKey: [
       'admin-applications',
       statusFilter,
@@ -131,6 +154,8 @@ export const ApplicationListPage: React.FC = () => {
       courseFilter,
       interviewStatusFilter,
       searchTerm,
+      page,
+      limit,
     ],
     queryFn: async () => {
       let queryUrl = '/admin/applications';
@@ -141,11 +166,16 @@ export const ApplicationListPage: React.FC = () => {
       if (courseFilter !== 'ALL') params.append('courseId', courseFilter);
       if (interviewStatusFilter !== 'ALL') params.append('interviewStatus', interviewStatusFilter);
       if (searchTerm.trim()) params.append('search', searchTerm.trim());
-      if (params.toString()) queryUrl += `?${params.toString()}`;
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+      queryUrl += `?${params.toString()}`;
 
-      return api.get<any[]>(queryUrl);
+      return api.get<PaginatedResponse<any>>(queryUrl);
     },
   });
+
+  const applications = paginated?.items ?? [];
+  const pagination = paginated?.pagination;
 
   // Multi-select handlers
   const handleSelectAll = (checked: boolean) => {
@@ -344,6 +374,18 @@ export const ApplicationListPage: React.FC = () => {
             <Download className="w-3.5 h-3.5 text-gold-600" />
             <span>Export CSV ({applications.length})</span>
           </Button>
+
+          {canAddStudent && (
+            <Button
+              onClick={() => setIsAddStudentModalOpen(true)}
+              variant="primary"
+              size="sm"
+              className="gap-2 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white border-none shadow-xs"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Direct Enrol Student</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -664,6 +706,15 @@ export const ApplicationListPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {pagination && pagination.total > 0 && (
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {/* 4. FLOATING BATCH ACTION BAR (Smooth entrance when selectedIds > 0) */}
@@ -1153,6 +1204,12 @@ export const ApplicationListPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Direct Add Student Modal */}
+      <AddStudentModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+      />
     </div>
   );
 };

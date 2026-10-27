@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { applicationsService } from './applications.service';
 import { sendSuccess, sendCreated } from '../../utils/response';
+import { parsePagination, buildPaginatedResult } from '../../utils/pagination';
 import { Role } from '@prisma/client';
 
 export class ApplicationsController {
@@ -26,7 +27,8 @@ export class ApplicationsController {
   async listAdminApplications(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { status, academicYearId, courseId, facultyId, departmentId, interviewStatus, search } = req.query;
-      const applications = await applicationsService.listAdminApplications({
+      const pagination = parsePagination(req);
+      const { items, total } = await applicationsService.listAdminApplications({
         status: status as any,
         academicYearId: academicYearId as string,
         courseId: courseId as string,
@@ -34,8 +36,14 @@ export class ApplicationsController {
         departmentId: departmentId as string,
         interviewStatus: interviewStatus as string,
         search: search as string,
+        skip: pagination.skip,
+        take: pagination.take,
       });
-      return sendSuccess(res, applications, 'Admin applications retrieved.');
+      return sendSuccess(
+        res,
+        buildPaginatedResult(items, total, pagination),
+        'Admin applications retrieved.'
+      );
     } catch (error) {
       next(error);
     }
@@ -44,7 +52,7 @@ export class ApplicationsController {
   async getApplicationById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
-      const isStaff = req.user!.role !== Role.APPLICANT;
+      const isStaff = ![Role.APPLICANT, Role.STUDENT].includes(req.user!.role as any);
       const application = await applicationsService.getApplicationById(
         id,
         req.user!.userId,

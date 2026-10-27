@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { ActionMenu } from '../../components/ui/ActionMenu';
+import { Pagination } from '../../components/ui/Pagination';
+import { usePagination, type PaginatedResponse } from '../../hooks/usePagination';
 
 export const PaymentLedgerPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -51,24 +53,32 @@ export const PaymentLedgerPage: React.FC = () => {
     setSearchParams(updated);
   };
 
+  // Pagination
+  const { page, limit, setPage, reset: resetPagination } = usePagination(15);
+  useEffect(() => {
+    resetPagination();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, typeFilter, searchTerm]);
+
   // Fetch payments
-  const { data: rawPayments = [], isLoading } = useQuery({
-    queryKey: ['admin-payments', statusFilter, searchTerm, typeFilter],
+  const { data: paginated, isLoading } = useQuery({
+    queryKey: ['admin-payments', statusFilter, searchTerm, typeFilter, page, limit],
     queryFn: async () => {
       let queryUrl = '/admin/payments';
       const params = new URLSearchParams();
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (typeFilter !== 'ALL') params.append('paymentType', typeFilter);
       if (searchTerm.trim()) params.append('search', searchTerm.trim());
-      if (params.toString()) queryUrl += `?${params.toString()}`;
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+      queryUrl += `?${params.toString()}`;
 
-      return api.get<any[]>(queryUrl);
+      return api.get<PaginatedResponse<any>>(queryUrl);
     },
   });
 
-  const payments = typeFilter === 'ALL'
-    ? rawPayments
-    : rawPayments.filter((p: any) => p.paymentType === typeFilter);
+  const payments = paginated?.items ?? [];
+  const pagination = paginated?.pagination;
 
   // Verify mutation
   const verifyMutation = useMutation({
@@ -442,6 +452,15 @@ export const PaymentLedgerPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {pagination && pagination.total > 0 && (
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {/* INSPECT & VERIFY MODAL */}

@@ -20,13 +20,16 @@ import {
   Calendar,
   Award,
   Sparkles,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { DocumentPreviewModal } from '../../components/ui/DocumentPreviewModal';
 
 export const ApplicationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [previewDoc, setPreviewDoc] = useState<{ id: string; filename?: string; mimeType?: string; title?: string } | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -317,7 +320,7 @@ export const ApplicationDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {!application.matriculationNumber && (
+              {!application.matriculationNumber && user?.role !== 'COMPLIANCE' && (
                 <button
                   type="button"
                   disabled={issueMatriculationMutation.isPending}
@@ -514,14 +517,20 @@ export const ApplicationDetailPage: React.FC = () => {
                     Status: {doc.status}
                   </span>
                 </div>
-                <a
-                  href={`/api/v1/documents/${doc.id}/file`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPreviewDoc({
+                      id: doc.id,
+                      filename: doc.originalFilename,
+                      mimeType: doc.mimeType,
+                      title: doc.documentType.replace(/_/g, ' '),
+                    })
+                  }
                   className="px-3 py-1.5 bg-slate-100 hover:bg-navy-800 hover:text-white text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> View
-                </a>
+                </button>
               </div>
             ))}
           </div>
@@ -648,6 +657,11 @@ export const ApplicationDetailPage: React.FC = () => {
               </Link>
             </div>
           </div>
+        ) : user?.role === 'COMPLIANCE' ? (
+          <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Auditor Notice: Admissions interview scheduling is administered by the Admissions Office.</span>
+          </div>
         ) : (
           <div className="mt-5 p-5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -670,49 +684,66 @@ export const ApplicationDetailPage: React.FC = () => {
       </div>
 
       {/* SECTION 6: ADMISSIONS BOARD DECISION ACTION DECK */}
-      <div className="bg-gradient-to-r from-navy-900 to-navy-950 text-white rounded-2xl p-6 sm:p-8 shadow-md">
-        <h2 className="text-lg font-bold text-gold-400 mb-2 flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5" /> 6. Admissions Officer Direct Override &amp; Board Action
-        </h2>
-        <p className="text-xs text-navy-200 mb-6">
-          Record board recommendations, request applicant clarification or render final acceptance/decline decision.
-        </p>
-
-        {actionError && (
-          <div className="mb-6 p-3 bg-red-900/80 border border-red-500 text-red-100 text-xs rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" /> {actionError}
+      {user?.role === 'COMPLIANCE' ? (
+        <div className="bg-amber-50 border border-amber-300 text-amber-950 rounded-2xl p-6 sm:p-8 flex items-start gap-3.5 shadow-sm">
+          <ShieldAlert className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-bold text-sm text-amber-950 flex items-center gap-2">
+              Compliance &amp; Audit Supervisory View
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-200 text-amber-900 font-bold uppercase">
+                View Only
+              </span>
+            </h3>
+            <p className="text-xs text-amber-800 mt-1 max-w-2xl leading-relaxed">
+              You are viewing this candidate's application in Auditor Mode. Compliance personnel possess supervisory viewing rights across all applicant records and activity logs. Application approvals, rejections, and correction requests can only be submitted by authorized Admissions and Executive administration.
+            </p>
           </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setCorrectionModalOpen(true)}
-            className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl border border-white/20 transition-all flex items-center gap-2"
-          >
-            <AlertCircle className="w-4 h-4 text-amber-400" />
-            Request Applicant Correction
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setDecisionModal('REJECT')}
-            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-2"
-          >
-            <XCircle className="w-4 h-4" />
-            Decline Application
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setDecisionModal('APPROVE')}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-2 ml-auto"
-          >
-            <CheckCircle className="w-4 h-4" />
-            Approve for Admission
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-gradient-to-r from-navy-900 to-navy-950 text-white rounded-2xl p-6 sm:p-8 shadow-md">
+          <h2 className="text-lg font-bold text-gold-400 mb-2 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5" /> 6. Admissions Officer Direct Override &amp; Board Action
+          </h2>
+          <p className="text-xs text-navy-200 mb-6">
+            Record board recommendations, request applicant clarification or render final acceptance/decline decision.
+          </p>
+
+          {actionError && (
+            <div className="mb-6 p-3 bg-red-900/80 border border-red-500 text-red-100 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" /> {actionError}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setCorrectionModalOpen(true)}
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl border border-white/20 transition-all flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+              Request Applicant Correction
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDecisionModal('REJECT')}
+              className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-2"
+            >
+              <XCircle className="w-4 h-4" />
+              Decline Application
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDecisionModal('APPROVE')}
+              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-2 ml-auto"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Approve for Admission
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DECISION CONFIRMATION MODAL */}
       {decisionModal && (
@@ -1046,6 +1077,15 @@ export const ApplicationDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <DocumentPreviewModal
+        open={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        documentId={previewDoc?.id ?? null}
+        filename={previewDoc?.filename}
+        mimeType={previewDoc?.mimeType}
+        title={previewDoc?.title ?? 'Document Preview'}
+      />
     </div>
   );
 };

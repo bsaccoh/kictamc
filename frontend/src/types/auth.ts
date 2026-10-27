@@ -1,4 +1,13 @@
-export type Role = 'APPLICANT' | 'ADMISSIONS_OFFICER' | 'FINANCE_OFFICER' | 'SYSTEM_ADMIN';
+export type Role =
+  | 'APPLICANT'
+  | 'STUDENT'
+  | 'LECTURER'
+  | 'COMPLIANCE'
+  | 'ADMISSIONS_OFFICER'
+  | 'FINANCE_OFFICER'
+  | 'ADMIN'
+  | 'SUPER_ADMIN'
+  | 'SYSTEM_ADMIN';
 
 export interface StudentProfile {
   id?: string;

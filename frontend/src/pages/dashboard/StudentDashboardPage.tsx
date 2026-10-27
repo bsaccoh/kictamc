@@ -97,11 +97,24 @@ export const StudentDashboardPage: React.FC = () => {
       {/* Welcome Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-            Welcome back, {user?.firstName || 'John'}!
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
+              Welcome back, {user?.firstName || 'Student'}!
+            </h1>
+            {user?.role === 'STUDENT' ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Enrolled Student
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                Prospective Applicant
+              </span>
+            )}
+          </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Official collegiate applicant portal • Academic Session {activeApp?.academicYear?.year || '2026/2027'}
+            {user?.role === 'STUDENT'
+              ? `Official Collegiate Enrolled Student Portal • Academic Session ${activeApp?.academicYear?.year || '2026/2027'}`
+              : `Official Collegiate Admissions Portal • Academic Session ${activeApp?.academicYear?.year || '2026/2027'}`}
           </p>
         </div>
 

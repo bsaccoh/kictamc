@@ -57,18 +57,47 @@ export const AdminLayout: React.FC = () => {
     );
   }
 
-  if (!user || user.role === 'APPLICANT') {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
+
+  if (user.role === 'APPLICANT' || user.role === 'STUDENT') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const formatRoleName = (role: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'Super Administrator';
+      case 'SYSTEM_ADMIN':
+        return 'System Administrator';
+      case 'ADMIN':
+        return 'College Administrator';
+      case 'COMPLIANCE':
+        return 'Compliance Officer';
+      case 'LECTURER':
+        return 'Lecturer / Academic';
+      case 'FINANCE_OFFICER':
+        return 'Finance Officer';
+      case 'ADMISSIONS_OFFICER':
+        return 'Admissions Officer';
+      default:
+        return 'Staff Member';
+    }
+  };
 
   const getHeaderTitle = () => {
     const path = location.pathname;
     if (path === '/admin') return 'Dashboard';
+    if (path === '/admin/module') return 'Admin';
+    if (path === '/admin/admissions') return 'Admissions Dashboard';
     if (path.startsWith('/admin/applications/')) return 'Application Details';
     if (path.startsWith('/admin/applications')) return 'Applications';
     if (path.startsWith('/admin/documents')) return 'Applicant Documents';
+    if (path.startsWith('/admin/finance')) return 'Finance Dashboard';
     if (path.startsWith('/admin/payments')) return 'Finance & Payments';
     if (path.startsWith('/admin/faculties/')) return 'Faculty Details';
+
     if (path.startsWith('/admin/faculties')) return 'Faculty Management';
     if (path.startsWith('/admin/departments/')) return 'Department Details';
     if (path.startsWith('/admin/departments')) return 'Department Management';
@@ -125,9 +154,16 @@ export const AdminLayout: React.FC = () => {
             </button>
 
             {/* Page Title */}
-            <h1 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
-              {getHeaderTitle()}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
+                {getHeaderTitle()}
+              </h1>
+              {user.role === 'COMPLIANCE' && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                  Auditor / View &amp; Logs Only
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Right Utilities: Notifications Bell + Admin Avatar Pill */}
@@ -229,13 +265,7 @@ export const AdminLayout: React.FC = () => {
                     {user.firstName || 'Staff'} {user.surname || ''}
                   </div>
                   <div className="text-[10px] text-slate-500 font-medium">
-                    {user.role === 'SYSTEM_ADMIN'
-                      ? 'System Administrator'
-                      : user.role === 'FINANCE_OFFICER'
-                      ? 'Finance Officer'
-                      : user.role === 'ADMISSIONS_OFFICER'
-                      ? 'Admissions Officer'
-                      : 'Staff Member'}
+                    {formatRoleName(user.role)}
                   </div>
                 </div>
               </button>
@@ -248,26 +278,22 @@ export const AdminLayout: React.FC = () => {
                     </p>
                     <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
                     <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                      {user.role === 'SYSTEM_ADMIN'
-                        ? 'System Administrator'
-                        : user.role === 'FINANCE_OFFICER'
-                        ? 'Finance Officer'
-                        : user.role === 'ADMISSIONS_OFFICER'
-                        ? 'Admissions Officer'
-                        : 'Staff'}
+                      {formatRoleName(user.role)}
                     </span>
                   </div>
 
-                  <div className="py-1">
-                    <Link
-                      to="/admin/settings"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                    >
-                      <Settings className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Console Settings</span>
-                    </Link>
-                  </div>
+                  {(user.role === 'SUPER_ADMIN' || user.role === 'SYSTEM_ADMIN') && (
+                    <div className="py-1">
+                      <Link
+                        to="/admin/settings"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Console Settings</span>
+                      </Link>
+                    </div>
+                  )}
 
                   <div className="py-1">
                     <button

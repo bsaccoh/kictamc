@@ -21,12 +21,26 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { api } from '../../services/api';
+import { OfficialSeal } from '../../components/ui/OfficialSeal';
 
 export const AdmissionLetterPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
   const letterRef = useRef<HTMLDivElement>(null);
+
+  // Fetch document configuration for template customisation
+  const { data: letterConfig } = useQuery<any>({
+    queryKey: ['document-config-letter'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<any>('/document-config/letter').catch(() => null);
+        return res?.data || res || null;
+      } catch {
+        return null;
+      }
+    },
+  });
 
   // Fetch application either by ID (staff or direct student link) or current student session
   const { data: application, isLoading, error } = useQuery({
@@ -367,17 +381,17 @@ export const AdmissionLetterPage: React.FC = () => {
           </div>
 
           <h1 className="text-xl sm:text-2xl font-serif font-extrabold text-[#0F223D] tracking-tight uppercase leading-tight">
-            Kenema ICT &amp; Management College
+            {letterConfig?.institutionName || 'Kenema ICT & Management College'}
           </h1>
           <p className="text-[10px] sm:text-[11px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">
-            Motto: "Non Sibi Sed Patriae" (Not For Self, But For Country)
+            Motto: "{letterConfig?.institutionMotto || 'Non Sibi Sed Patriae (Not For Self, But For Country)'}"
           </p>
           <p className="text-[10px] font-semibold text-slate-700 uppercase tracking-wide mt-0.5">
-            Office of the Registrar &amp; Academic Admissions Board
+            {letterConfig?.officeName || 'Office of the Registrar & Academic Admissions Board'}
           </p>
           <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
-            19 Bockarie Gbay Street Kenema • Contact: +23272808080<br />
-            Email: admissions@kictamc.edu.sl | Website: www.kictamc.edu.sl
+            {letterConfig?.institutionAddress || '19 Bockarie Gbay Street Kenema • Contact: +23272808080'}<br />
+            Email: {letterConfig?.institutionEmail || 'admissions@kictamc.edu.sl'} | Website: {letterConfig?.institutionWebsite || 'www.kictamc.edu.sl'}
           </p>
 
           {/* Double Rule Header Divider */}
@@ -434,7 +448,7 @@ export const AdmissionLetterPage: React.FC = () => {
         {/* 4. Subject Line */}
         <div className="py-1.5 text-center sm:text-left">
           <h2 className="text-xs sm:text-sm font-bold text-[#0F223D] tracking-wide uppercase border-b-2 border-slate-900 inline-block pb-0.5">
-            Provisional Offer of Admission &amp; Approved Fee Tariff — {academicYear} Session
+            {letterConfig?.title || 'Offer of Admission'} — {academicYear} Session
           </h2>
         </div>
 
@@ -578,47 +592,55 @@ export const AdmissionLetterPage: React.FC = () => {
         {/* 7. Signatures & Official College Stamp */}
         <div className="mt-5 pt-3 border-t border-slate-200">
           <div className="grid grid-cols-3 gap-4 items-end text-center sm:text-left">
-            {/* Registrar Signature */}
+            {/* Primary Signatory (Registrar) */}
             <div>
               <div className="h-8 flex items-center justify-center sm:justify-start">
                 <span className="font-serif italic font-bold text-base text-[#0F223D] tracking-wide select-none">
-                  S. M. Kallon
+                  {letterConfig?.primarySignatureText || 'S. M. Kallon'}
                 </span>
               </div>
               <div className="border-t border-slate-400 pt-1">
-                <p className="font-bold text-[10.5px] text-slate-900">Mr. S. M. Kallon</p>
-                <p className="text-[9.5px] text-slate-500">Registrar &amp; Secretary to Council</p>
-                <p className="text-[8.5px] text-slate-400">KICTAMC Academic Registry</p>
+                <p className="font-bold text-[10.5px] text-slate-900">
+                  {letterConfig?.primarySignatoryName || 'Mr. S. M. Kallon'}
+                </p>
+                <p className="text-[9.5px] text-slate-500">
+                  {letterConfig?.primarySignatoryTitle || 'Registrar & Secretary to Council'}
+                </p>
+                <p className="text-[8.5px] text-slate-400">
+                  {letterConfig?.primarySignatoryOffice || 'KICTAMC Academic Registry'}
+                </p>
               </div>
             </div>
 
-            {/* Official Stamp Emblem in Center */}
+            {/* Professional Official College Seal */}
             <div className="flex flex-col items-center justify-center">
-              <div className="w-18 h-18 rounded-full border-2 border-dashed border-[#0F223D]/40 flex flex-col items-center justify-center p-1.5 text-center rotate-[-4deg] bg-navy-50/20">
-                <ShieldCheck className="w-5 h-5 text-emerald-700 mb-0.5" />
-                <span className="text-[7px] font-extrabold uppercase tracking-widest text-[#0F223D]">
-                  OFFICIALLY SEALED
-                </span>
-                <span className="text-[6.5px] font-semibold text-slate-500">
-                  KENEMA ICT &amp; MGT
-                </span>
-                <span className="text-[7.5px] font-mono font-bold text-emerald-800">
-                  {academicYear}
-                </span>
-              </div>
+              <OfficialSeal
+                size={110}
+                type="admission"
+                sessionYear={academicYear}
+                topText={letterConfig?.sealTopText}
+                centerText={letterConfig?.sealCenterText}
+                bottomText={letterConfig?.sealBottomText}
+              />
             </div>
 
-            {/* Dean of Academic Affairs Signature */}
+            {/* Secondary Signatory (Dean) */}
             <div className="text-right">
               <div className="h-8 flex items-center justify-center sm:justify-end">
                 <span className="font-serif italic font-bold text-base text-[#0F223D] tracking-wide select-none">
-                  Dr. A. B. Kamara
+                  {letterConfig?.secondarySignatureText || 'Dr. A. B. Kamara'}
                 </span>
               </div>
               <div className="border-t border-slate-400 pt-1">
-                <p className="font-bold text-[10.5px] text-slate-900">Dr. A. B. Kamara</p>
-                <p className="text-[9.5px] text-slate-500">Dean of Academic Affairs</p>
-                <p className="text-[8.5px] text-slate-400">Admissions Board Chair</p>
+                <p className="font-bold text-[10.5px] text-slate-900">
+                  {letterConfig?.secondarySignatoryName || 'Dr. A. B. Kamara'}
+                </p>
+                <p className="text-[9.5px] text-slate-500">
+                  {letterConfig?.secondarySignatoryTitle || 'Dean of Academic Affairs'}
+                </p>
+                <p className="text-[8.5px] text-slate-400">
+                  {letterConfig?.secondarySignatoryOffice || 'Admissions Board Chair'}
+                </p>
               </div>
             </div>
           </div>

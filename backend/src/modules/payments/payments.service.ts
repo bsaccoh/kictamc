@@ -239,6 +239,13 @@ export class PaymentsService {
         },
       });
 
+      if (isTuition) {
+        await tx.user.update({
+          where: { id: app.applicantId },
+          data: { role: Role.STUDENT },
+        });
+      }
+
       // 4. Status history
       await tx.applicationStatusHistory.create({
         data: {
@@ -378,6 +385,13 @@ export class PaymentsService {
               }),
         },
       });
+
+      if (isTuition) {
+        await tx.user.update({
+          where: { id: payment.application.applicantId },
+          data: { role: Role.STUDENT },
+        });
+      }
 
       // 4. Record history
       await tx.applicationStatusHistory.create({
@@ -534,35 +548,455 @@ export class PaymentsService {
     status?: PaymentStatus;
     paymentType?: string;
     search?: string;
+    skip?: number;
+    take?: number;
   }) {
-    const { status, paymentType, search } = params;
+    const { status, paymentType, search, skip, take } = params;
 
-    return prisma.payment.findMany({
+    const where = {
+      ...(status && { status }),
+      ...(paymentType && paymentType !== 'ALL' && { paymentType }),
+      ...(search && {
+        OR: [
+          { internalReference: { contains: search, mode: 'insensitive' as const } },
+          { providerTransactionReference: { contains: search, mode: 'insensitive' as const } },
+          { application: { applicationReference: { contains: search, mode: 'insensitive' as const } } },
+          { application: { applicant: { surname: { contains: search, mode: 'insensitive' as const } } } },
+        ],
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          application: {
+            include: {
+              applicant: { select: { firstName: true, surname: true, email: true, phone: true } },
+              course: true,
+            },
+          },
+          confirmationToken: true,
+          verifiedBy: { select: { firstName: true, surname: true } },
+        },
+        orderBy: { submittedAt: 'desc' },
+        ...(typeof skip === 'number' && { skip }),
+        ...(typeof take === 'number' && { take }),
+      }),
+      prisma.payment.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  // Finance Dashboard Aggregations
+  async getFinanceDashboardData(period = '30d') {
+    const now = new Date();
+    let start: Date;
+    let end: Date = now;
+    let prevStart: Date;
+    let prevEnd: Date;
+    let dateRangeLabel: string;
+    let comparisonLabel = 'vs. previous 30 days';
+
+    switch (period) {
+      case 'this_month': {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        const monthName = start.toLocaleString('en-US', { month: 'short' });
+        dateRangeLabel = `01 ${monthName} ${start.getFullYear()} – ${now.getDate().toString().padStart(2, '0')} ${monthName} ${now.getFullYear()}`;
+        comparisonLabel = 'vs. previous month';
+        break;
+      }
+      case 'last_month': {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        prevStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
+        const monthName = start.toLocaleString('en-US', { month: 'short' });
+        dateRangeLabel = `01 ${monthName} ${start.getFullYear()} – ${end.getDate().toString().padStart(2, '0')} ${monthName} ${end.getFullYear()}`;
+        comparisonLabel = 'vs. prior month';
+        break;
+      }
+      case '90d': {
+        start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(start.getTime() - 90 * 24 * 60 * 60 * 1000);
+        prevEnd = start;
+        const sMonth = start.toLocaleString('en-US', { month: 'short' });
+        const eMonth = end.toLocaleString('en-US', { month: 'short' });
+        dateRangeLabel = `${start.getDate().toString().padStart(2, '0')} ${sMonth} ${start.getFullYear()} – ${end.getDate().toString().padStart(2, '0')} ${eMonth} ${end.getFullYear()}`;
+        comparisonLabel = 'vs. previous 90 days';
+        break;
+      }
+      case 'this_year': {
+        start = new Date(now.getFullYear(), 0, 1);
+        prevStart = new Date(now.getFullYear() - 1, 0, 1);
+        prevEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        dateRangeLabel = `01 Jan ${now.getFullYear()} – ${now.getDate().toString().padStart(2, '0')} ${now.toLocaleString('en-US', { month: 'short' })} ${now.getFullYear()}`;
+        comparisonLabel = 'vs. previous year';
+        break;
+      }
+      case 'all': {
+        start = new Date(2020, 0, 1);
+        prevStart = new Date(2019, 0, 1);
+        prevEnd = start;
+        dateRangeLabel = 'All Available Records';
+        comparisonLabel = 'all-time record';
+        break;
+      }
+      case '30d':
+      default: {
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        prevStart = new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000);
+        prevEnd = start;
+        const sMonth = start.toLocaleString('en-US', { month: 'short' });
+        const eMonth = end.toLocaleString('en-US', { month: 'short' });
+        dateRangeLabel = `${start.getDate().toString().padStart(2, '0')} ${sMonth} ${start.getFullYear()} – ${end.getDate().toString().padStart(2, '0')} ${eMonth} ${end.getFullYear()}`;
+        comparisonLabel = 'vs. previous 30 days';
+        break;
+      }
+    }
+
+    // Query current period payments
+    const currentPayments = await prisma.payment.findMany({
       where: {
-        ...(status && { status }),
-        ...(paymentType && paymentType !== 'ALL' && { paymentType }),
-        ...(search && {
-          OR: [
-            { internalReference: { contains: search, mode: 'insensitive' } },
-            { providerTransactionReference: { contains: search, mode: 'insensitive' } },
-            { application: { applicationReference: { contains: search, mode: 'insensitive' } } },
-            { application: { applicant: { surname: { contains: search, mode: 'insensitive' } } } },
-          ],
-        }),
+        submittedAt: {
+          gte: start,
+          lte: end,
+        },
       },
       include: {
         application: {
           include: {
-            applicant: { select: { firstName: true, surname: true, email: true, phone: true } },
-            course: true,
+            applicant: { select: { firstName: true, surname: true } },
           },
         },
         confirmationToken: true,
-        verifiedBy: { select: { firstName: true, surname: true } },
       },
       orderBy: { submittedAt: 'desc' },
     });
+
+    // Query previous period payments for trends comparison
+    const previousPayments = await prisma.payment.findMany({
+      where: {
+        submittedAt: {
+          gte: prevStart,
+          lte: prevEnd,
+        },
+      },
+    });
+
+    const sumMinor = (
+      list: { status: PaymentStatus; declaredAmountMinor?: number | null; expectedAmountMinor: number }[],
+      status?: PaymentStatus
+    ) =>
+      list
+        .filter((p) => (status ? p.status === status : true))
+        .reduce((sum, p) => sum + (p.declaredAmountMinor || p.expectedAmountMinor || 0), 0);
+
+
+    // Minor to major currency (e.g. 250000 -> 2500)
+    const currentTotalReceivedMinor = sumMinor(currentPayments, PaymentStatus.PAID);
+    const prevTotalReceivedMinor = sumMinor(previousPayments, PaymentStatus.PAID);
+
+    const currentVerifiedMinor = currentTotalReceivedMinor;
+    const prevVerifiedMinor = prevTotalReceivedMinor;
+
+    const currentPendingMinor = sumMinor(currentPayments, PaymentStatus.PENDING_VERIFICATION);
+    const prevPendingMinor = sumMinor(previousPayments, PaymentStatus.PENDING_VERIFICATION);
+
+    const currentRejectedMinor = sumMinor(currentPayments, PaymentStatus.REJECTED);
+    const prevRejectedMinor = sumMinor(previousPayments, PaymentStatus.REJECTED);
+
+    const calcTrend = (current: number, previous: number) => {
+      if (previous === 0) {
+        return {
+          trendPercent: current > 0 ? 100 : 0,
+          trendDirection: 'up' as const,
+        };
+      }
+      const diff = current - previous;
+      const percent = Math.round(Math.abs((diff / previous) * 100));
+      return {
+        trendPercent: percent,
+        trendDirection: (diff >= 0 ? 'up' : 'down') as 'up' | 'down',
+      };
+    };
+
+    const currencyLabel = 'Le';
+    const formatMoney = (minor: number) =>
+      `${currencyLabel} ${Math.round(minor / 100).toLocaleString('en-US')}`;
+
+    const totalTrend = calcTrend(currentTotalReceivedMinor, prevTotalReceivedMinor);
+    const verifiedTrend = calcTrend(currentVerifiedMinor, prevVerifiedMinor);
+    const pendingTrend = calcTrend(currentPendingMinor, prevPendingMinor);
+    const rejectedTrend = calcTrend(currentRejectedMinor, prevRejectedMinor);
+
+    // Multi-series Line Chart: Generate 7 date bucket points across [start, end]
+    const numBuckets = 7;
+    const bucketDurationMs = (end.getTime() - start.getTime()) / (numBuckets - 1 || 1);
+    const paymentTrends: {
+      date: string;
+      totalReceived: number;
+      verified: number;
+      pending: number;
+      rejected: number;
+    }[] = [];
+
+    for (let i = 0; i < numBuckets; i++) {
+      const bucketDate = new Date(start.getTime() + i * bucketDurationMs);
+      const bucketNext = new Date(start.getTime() + (i + 1) * bucketDurationMs);
+      const isLast = i === numBuckets - 1;
+
+      const inBucket = currentPayments.filter((p) => {
+        const time = new Date(p.submittedAt).getTime();
+        return isLast
+          ? time >= bucketDate.getTime() && time <= end.getTime()
+          : time >= bucketDate.getTime() && time < bucketNext.getTime();
+      });
+
+      const dayMonth = bucketDate.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+      });
+
+      const bPaid = sumMinor(inBucket, PaymentStatus.PAID) / 100;
+      const bPending = sumMinor(inBucket, PaymentStatus.PENDING_VERIFICATION) / 100;
+      const bRejected = sumMinor(inBucket, PaymentStatus.REJECTED) / 100;
+
+      paymentTrends.push({
+        date: dayMonth,
+        totalReceived: bPaid,
+        verified: bPaid,
+        pending: bPending,
+        rejected: bRejected,
+      });
+    }
+
+    // Payments by Method (Donut Chart)
+    const methodCounts: Record<string, number> = {
+      'Online Payment': 0,
+      'Bank Transfer': 0,
+      'Mobile Money': 0,
+      'Cash / Other': 0,
+    };
+
+    for (const p of currentPayments) {
+      if (p.paymentMethod === PaymentMethod.ONLINE_MOCK) {
+        methodCounts['Online Payment']++;
+      } else if (p.paymentMethod === PaymentMethod.MANUAL_BANK_DEPOSIT) {
+        methodCounts['Bank Transfer']++;
+      } else if (
+        p.paymentMethod === PaymentMethod.MANUAL_ORANGE_MONEY ||
+        p.paymentMethod === PaymentMethod.MANUAL_AFRIMONEY
+      ) {
+        methodCounts['Mobile Money']++;
+      } else {
+        methodCounts['Cash / Other']++;
+      }
+    }
+
+    const totalMethods = currentPayments.length;
+    const METHOD_PALETTE: Record<string, string> = {
+      'Online Payment': '#1e3a8a',
+      'Bank Transfer': '#10b981',
+      'Mobile Money': '#f59e0b',
+      'Cash / Other': '#ef4444',
+    };
+
+    const paymentMethods = Object.entries(methodCounts)
+      .map(([method, count]) => ({
+        method,
+        count,
+        sharePercent: totalMethods > 0 ? Math.round((count / totalMethods) * 100) : 0,
+        color: METHOD_PALETTE[method],
+      }))
+      .filter((m) => totalMethods === 0 || m.count > 0);
+
+    // Payment Status Summary (Bar Chart)
+    const statusCounts = {
+      Verified: currentPayments.filter((p) => p.status === PaymentStatus.PAID).length,
+      Pending: currentPayments.filter((p) => p.status === PaymentStatus.PENDING_VERIFICATION).length,
+      Rejected: currentPayments.filter((p) => p.status === PaymentStatus.REJECTED).length,
+      Failed: currentPayments.filter(
+        (p) => p.status === PaymentStatus.REFUNDED || p.status === PaymentStatus.UNPAID
+      ).length,
+    };
+
+    const paymentStatusSummary = [
+      { status: 'Verified', count: statusCounts.Verified },
+      { status: 'Pending', count: statusCounts.Pending },
+      { status: 'Rejected', count: statusCounts.Rejected },
+      { status: 'Failed', count: statusCounts.Failed },
+    ];
+
+    // Method formatter helper for table
+    const formatMethodName = (pm: PaymentMethod) => {
+      switch (pm) {
+        case PaymentMethod.ONLINE_MOCK:
+          return 'Online';
+        case PaymentMethod.MANUAL_BANK_DEPOSIT:
+          return 'Bank Transfer';
+        case PaymentMethod.MANUAL_ORANGE_MONEY:
+          return 'Orange Money';
+        case PaymentMethod.MANUAL_AFRIMONEY:
+          return 'Afrimoney';
+        default:
+          return 'Manual Payment';
+      }
+    };
+
+    // Format table status
+    const formatStatusName = (status: PaymentStatus): 'Verified' | 'Pending' | 'Rejected' | 'Failed' => {
+      switch (status) {
+        case PaymentStatus.PAID:
+          return 'Verified';
+        case PaymentStatus.PENDING_VERIFICATION:
+          return 'Pending';
+        case PaymentStatus.REJECTED:
+          return 'Rejected';
+        default:
+          return 'Failed';
+      }
+    };
+
+    const formatTableDate = (d: Date) => {
+      const date = new Date(d);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = date.toLocaleString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const mins = date.getMinutes().toString().padStart(2, '0');
+      return `${day} ${month} ${year} ${hours}:${mins}`;
+    };
+
+    // 5-10 Recent Payment Transactions
+    const transactions = currentPayments.slice(0, 10).map((p) => ({
+      id: p.id,
+      applicationReference: p.application.applicationReference,
+      studentName: `${p.application.applicant.firstName} ${p.application.applicant.surname}`,
+      amount: Math.round((p.declaredAmountMinor || p.expectedAmountMinor || 0) / 100),
+      currency: currencyLabel,
+      method: formatMethodName(p.paymentMethod),
+      status: formatStatusName(p.status),
+      dateLabel: formatTableDate(p.submittedAt),
+      href: `/admin/payments?ref=${encodeURIComponent(p.application.applicationReference)}`,
+      applicationId: p.applicationId,
+    }));
+
+    // Time ago helper
+    const timeAgo = (date: Date) => {
+      const seconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
+      if (seconds < 60) return 'Just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+      return date.toLocaleDateString('en-GB');
+    };
+
+    // Recent Activity Feed
+    const recentActivity: {
+      id: string;
+      kind: 'verified' | 'receipt' | 'rejected' | 'transaction';
+      title: string;
+      reference?: string;
+      detail?: string;
+      timeLabel: string;
+    }[] = [];
+
+    for (const p of currentPayments.slice(0, 10)) {
+      const amountStr = `${currencyLabel} ${Math.round((p.declaredAmountMinor || p.expectedAmountMinor || 0) / 100).toLocaleString('en-US')}`;
+      if (p.status === PaymentStatus.PAID && p.verifiedAt) {
+        recentActivity.push({
+          id: `act-ver-${p.id}`,
+          kind: 'verified',
+          title: 'Payment verified',
+          reference: `${p.application.applicationReference} • ${amountStr}`,
+          timeLabel: timeAgo(p.verifiedAt),
+        });
+      }
+      if (p.confirmationToken) {
+        recentActivity.push({
+          id: `act-tok-${p.confirmationToken.id}`,
+          kind: 'receipt',
+          title: 'Receipt generated',
+          reference: `${p.application.applicationReference} • ${p.confirmationToken.token}`,
+          timeLabel: timeAgo(p.confirmationToken.issuedAt),
+        });
+      }
+      if (p.status === PaymentStatus.REJECTED && p.updatedAt) {
+        recentActivity.push({
+          id: `act-rej-${p.id}`,
+          kind: 'rejected',
+          title: 'Payment rejected',
+          reference: `${p.application.applicationReference} • ${amountStr}`,
+          detail: p.rejectionReason || undefined,
+          timeLabel: timeAgo(p.updatedAt),
+        });
+      }
+      recentActivity.push({
+        id: `act-sub-${p.id}`,
+        kind: 'transaction',
+        title: 'New transaction',
+        reference: `${p.application.applicationReference} • ${amountStr}`,
+        timeLabel: timeAgo(p.submittedAt),
+      });
+    }
+
+    return {
+      currencyLabel,
+      period,
+      dateRangeLabel,
+      kpis: {
+        totalReceived: {
+          title: 'Total Payments Received',
+          value: Math.round(currentTotalReceivedMinor / 100),
+          formattedValue: formatMoney(currentTotalReceivedMinor),
+          trendPercent: totalTrend.trendPercent,
+          trendDirection: totalTrend.trendDirection,
+          comparisonLabel,
+          icon: 'coins' as const,
+        },
+        verified: {
+          title: 'Verified Payments',
+          value: Math.round(currentVerifiedMinor / 100),
+          formattedValue: formatMoney(currentVerifiedMinor),
+          trendPercent: verifiedTrend.trendPercent,
+          trendDirection: verifiedTrend.trendDirection,
+          comparisonLabel,
+          icon: 'card' as const,
+        },
+        pending: {
+          title: 'Pending Verification',
+          value: Math.round(currentPendingMinor / 100),
+          formattedValue: formatMoney(currentPendingMinor),
+          trendPercent: pendingTrend.trendPercent,
+          trendDirection: pendingTrend.trendDirection,
+          comparisonLabel,
+          icon: 'clock' as const,
+        },
+        rejected: {
+          title: 'Rejected Payments',
+          value: Math.round(currentRejectedMinor / 100),
+          formattedValue: formatMoney(currentRejectedMinor),
+          trendPercent: rejectedTrend.trendPercent,
+          trendDirection: rejectedTrend.trendDirection,
+          comparisonLabel,
+          icon: 'alert' as const,
+        },
+      },
+      paymentTrends,
+      paymentMethods,
+      transactions,
+      paymentStatusSummary,
+      recentActivity: recentActivity.slice(0, 5),
+    };
   }
 }
 
 export const paymentsService = new PaymentsService();
+

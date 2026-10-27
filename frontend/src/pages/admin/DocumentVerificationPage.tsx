@@ -60,7 +60,8 @@ export const DocumentVerificationPage: React.FC = () => {
   const fetchDocuments = async () => {
     try {
       setIsLoading(true);
-      const apps: any[] = await api.get('/admin/applications');
+      const resp: any = await api.get('/admin/applications?limit=100');
+      const apps: any[] = Array.isArray(resp) ? resp : (resp?.items ?? []);
       const allDocs: any[] = [];
       apps.forEach((app) => {
         (app.documents || []).forEach((doc: any) => {

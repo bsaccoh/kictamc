@@ -48,10 +48,13 @@ export const ApplicationFeesPage: React.FC = () => {
   });
 
   // Fetch payments for revenue metric
-  const { data: payments = [] } = useQuery({
+  const { data: paymentsResp } = useQuery({
     queryKey: ['admin-payments-fees'],
-    queryFn: () => api.get<any[]>('/admin/payments'),
+    queryFn: () => api.get<any>('/admin/payments?limit=500'),
   });
+  const payments: any[] = Array.isArray(paymentsResp)
+    ? paymentsResp
+    : (paymentsResp?.items ?? []);
 
   // Mutation to update course application and tuition fee
   const updateFeeMutation = useMutation({
